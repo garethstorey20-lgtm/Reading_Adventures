@@ -1,0 +1,24 @@
+UPLOAD THIS ENTIRE FOLDER TO GITHUB
+====================================
+
+Folder location on your PC:
+C:\Users\garet\OneDrive\Desktop\reading-adventures-web
+
+Target repo: Reading_Adventures
+Live URL: https://garethstorey20-lgtm.github.io/Reading_Adventures/
+Student link: https://garethstorey20-lgtm.github.io/Reading_Adventures/web-pilot/?t=YOUR_SCHOOL_CODE
+
+METHOD A — GitHub website
+1. Open repo Reading_Adventures
+2. Upload all files from this folder (replace existing)
+3. Settings → Pages → branch main → /(root) → Save
+4. Wait 5–10 minutes, then test the student link (banner should say "pilot v2")
+
+METHOD B — Git
+1. cd "C:\Users\garet\OneDrive\Desktop\reading-adventures-web"
+2. git init
+3. git add .
+4. git commit -m "Publish Reading Adventures web"
+5. git branch -M main
+6. git remote add origin https://github.com/garethstorey20-lgtm/Reading_Adventures.git
+7. git push -u origin main
