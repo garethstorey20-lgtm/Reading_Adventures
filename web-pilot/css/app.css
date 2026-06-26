@@ -5029,11 +5029,10 @@ button:disabled,
   z-index: 1;
   display: flex;
   flex-direction: row;
-  align-items: center;
   justify-content: center;
   width: min(98vw, 88rem);
-  flex: 0 1 auto;
-  min-height: 0;
+  flex: 1 1 auto;
+  min-height: min(65dvh, 28rem);
   height: 100%;
   max-height: 100%;
   margin: 0 auto;
@@ -5079,15 +5078,14 @@ button:disabled,
   flex-direction: column;
   align-items: stretch;
   align-self: stretch;
-  height: 100%;
-  min-height: 100%;
+  min-height: 0;
   z-index: 5;
   filter: drop-shadow(3px 0 10px rgba(0, 0, 0, 0.4));
 }
 .signpost-pole {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   width: 100%;
-  min-height: 0;
+  min-height: 6rem;
   background:
     repeating-linear-gradient(90deg, transparent 0 4px, rgba(0, 0, 0, 0.08) 4px 5px),
     linear-gradient(90deg, #5c3a1e 0%, #9a6b3d 30%, #d4b896 50%, #8b5e34 70%, #5c3a1e 100%);
@@ -5384,7 +5382,7 @@ button:disabled,
   min-height: 0;
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   overflow: hidden;
   position: relative;
