@@ -86,11 +86,67 @@
 
 
 
-  async function loadDriveFileById(fileId, apiKey) {
+  async function loadDriveFileById(fileId, apiKey, tenantSlug) {
 
     const text = await window.DrivePilotLoader.loadClassDataJson(fileId, apiKey);
 
+    if (tenantSlug && window.DrivePilotLoader.rememberFileId) {
+
+      window.DrivePilotLoader.rememberFileId(tenantSlug, fileId);
+
+    }
+
     await applyClassDataText(text);
+
+  }
+
+
+
+  function renderJsonFileButtons(files) {
+
+    if (!files.length) {
+
+      return '<p class="text-sm text-white/70">No JSON files listed yet. Ask your teacher to upload a class file to the shared Drive folder.</p>';
+
+    }
+
+    return files
+
+      .map(function (f) {
+
+        const safeName = String(f.name || "file.json").replace(/</g, "&lt;");
+
+        return (
+
+          '<button type="button" class="drive-file-pick w-full text-left bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl px-4 py-3 mb-2 transition" data-file-id="' +
+
+          f.id +
+
+          '">' +
+
+          '<div class="font-semibold">📄 ' +
+
+          safeName +
+
+          "</div>" +
+
+          (f.modifiedTime
+
+            ? '<div class="text-xs text-white/60">Updated ' +
+
+              new Date(f.modifiedTime).toLocaleString() +
+
+              "</div>"
+
+            : "") +
+
+          "</button>"
+
+        );
+
+      })
+
+      .join("");
 
   }
 
@@ -104,21 +160,29 @@
 
     let folderId = "";
 
-    let classDataFileName = "class-data.json";
+    let classDataFileName = "";
 
     let tenantLabel = "";
 
+    let tenantSlug = "";
+
+    let files = [];
+
+    let needsPicker = false;
 
 
-    const tenantSlug = window.TenantRegistry?.tenantFromUrl();
 
-    if (tenantSlug && window.TenantRegistry) {
+    const slug = window.TenantRegistry?.tenantFromUrl();
 
-      const row = await window.TenantRegistry.resolveTenant(tenantSlug);
+    if (slug && window.TenantRegistry) {
+
+      tenantSlug = slug;
+
+      const row = await window.TenantRegistry.resolveTenant(slug);
 
       if (!row) {
 
-        throw new Error("Unknown school link (?t=" + tenantSlug + "). Check tenants.json.");
+        throw new Error("Unknown school link (?t=" + slug + "). Check tenants.json.");
 
       }
 
@@ -128,11 +192,13 @@
 
       folderId = row.folderId;
 
-      classDataFileName = row.classDataFileName;
+      classDataFileName = row.classDataFileName || "";
 
-      fileId =
 
-        (await window.DrivePilotLoader.resolveClassDataFileId({
+
+      if (!fileId && row.folderId) {
+
+        const resolved = await window.DrivePilotLoader.resolveFolderJsonFile({
 
           classDataFileId: row.classDataFileId,
 
@@ -140,21 +206,33 @@
 
           classDataFileName: row.classDataFileName,
 
+          tenantSlug: slug,
+
           apiKey,
 
-        })) || fileId;
+        });
+
+        fileId = resolved.fileId;
+
+        files = resolved.files;
+
+        needsPicker = resolved.needsPicker;
+
+      }
 
     }
 
 
 
-    return { fileId, apiKey, folderId, classDataFileName, tenantLabel };
+    return { fileId, apiKey, folderId, classDataFileName, tenantLabel, tenantSlug, files, needsPicker };
 
   }
 
 
 
-  async function renderDriveConnect(app) {
+  async function renderDriveConnect(app, options) {
+
+    const opts = options || {};
 
     const tenantSlug = window.TenantRegistry?.tenantFromUrl();
 
@@ -166,9 +244,11 @@
 
     let ctx = null;
 
-    let files = [];
+    let files = Array.isArray(opts.files) ? opts.files : [];
 
     let listError = "";
+
+    const chooseMode = !!opts.chooseMode;
 
 
 
@@ -176,7 +256,7 @@
 
       ctx = await resolveTenantContext();
 
-      if (ctx.folderId && ctx.apiKey) {
+      if (!files.length && ctx.folderId && ctx.apiKey) {
 
         try {
 
@@ -204,49 +284,23 @@
 
 
 
-    const fileButtons =
+    const leadText = chooseMode
 
-      files.length > 0
+      ? "Choose your class or year group:"
 
-        ? files
+      : "Load class data from your school's Google Drive folder.";
 
-            .map(function (f) {
+    const fileSectionTitle = chooseMode
 
-              const safeName = String(f.name || "file.json").replace(/</g, "&lt;");
+      ? "Available class files:"
 
-              return (
+      : "Or choose a file from the Drive folder:";
 
-                '<button type="button" class="drive-file-pick w-full text-left bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl px-4 py-3 mb-2 transition" data-file-id="' +
+    const reloadLabel = files.length === 1
 
-                f.id +
+      ? "Load " + files[0].name
 
-                '">' +
-
-                '<div class="font-semibold">📄 ' +
-
-                safeName +
-
-                "</div>" +
-
-                (f.modifiedTime
-
-                  ? '<div class="text-xs text-white/60">Updated ' +
-
-                    new Date(f.modifiedTime).toLocaleString() +
-
-                    "</div>"
-
-                  : "") +
-
-                "</button>"
-
-              );
-
-            })
-
-            .join("")
-
-        : '<p class="text-sm text-white/70">No JSON files listed yet. Ask your teacher to upload <strong>class-data.json</strong> to the shared Drive folder.</p>';
+      : "Reload latest file from Google Drive";
 
 
 
@@ -260,7 +314,11 @@
 
       '<h1 class="text-3xl md:text-4xl font-bold mb-2">Reading Adventure</h1>' +
 
-      '<p class="text-lg text-white/80 mb-6" id="upload-lead">Load class data from your school\'s Google Drive folder.</p>' +
+      '<p class="text-lg text-white/80 mb-6" id="upload-lead">' +
+
+      leadText +
+
+      "</p>" +
 
       '<p class="text-sm text-white/60 mb-6">' +
 
@@ -268,21 +326,35 @@
 
       "</p>" +
 
-      '<button type="button" id="btn-drive-reload" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-4 px-6 rounded-2xl shadow-lg mb-6 transition">' +
+      (chooseMode || files.length !== 1
 
-      "Load class-data.json from Google Drive" +
+        ? ""
 
-      "</button>" +
+        : '<button type="button" id="btn-drive-reload" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-4 px-6 rounded-2xl shadow-lg mb-6 transition">' +
+
+          reloadLabel +
+
+          "</button>") +
 
       '<div class="text-left mb-4">' +
 
-      '<div class="text-sm font-semibold text-white/80 mb-2">Or choose a file from the Drive folder:</div>' +
+      '<div class="text-sm font-semibold text-white/80 mb-2">' +
+
+      fileSectionTitle +
+
+      "</div>" +
 
       '<div id="drive-file-list">' +
 
-      fileButtons +
+      renderJsonFileButtons(files) +
 
       "</div></div>" +
+
+      (chooseMode
+
+        ? '<p class="text-xs text-white/50 mt-2">Your choice is remembered on this device next time you open this link.</p>'
+
+        : "") +
 
       '<div id="uploadMsg" class="mt-2 text-yellow-200 text-sm"></div>' +
 
@@ -316,13 +388,13 @@
 
         try {
 
-          showLoadingScreen("Loading class-data.json…");
+          showLoadingScreen("Loading class file…");
 
           const fresh = await resolveTenantContext();
 
           if (!fresh.fileId) throw new Error("No class data file found in Drive.");
 
-          await loadDriveFileById(fresh.fileId, fresh.apiKey);
+          await loadDriveFileById(fresh.fileId, fresh.apiKey, fresh.tenantSlug);
 
         } catch (err) {
 
@@ -356,7 +428,9 @@
 
           const apiKey = await window.DrivePilotLoader.resolveApiKey();
 
-          await loadDriveFileById(fileId, apiKey);
+          const slug = window.TenantRegistry?.tenantFromUrl() || "";
+
+          await loadDriveFileById(fileId, apiKey, slug);
 
         } catch (err) {
 
@@ -410,7 +484,17 @@
 
         const app = document.getElementById("app");
 
-        if (app) return renderDriveConnect(app);
+        if (app) {
+
+          return renderDriveConnect(app, {
+
+            chooseMode: !!window.DrivePilot._chooseMode,
+
+            files: window.DrivePilot._folderFiles || [],
+
+          });
+
+        }
 
       }
 
@@ -443,11 +527,25 @@
 
         try {
 
-          const { fileId, apiKey } = await resolveTenantContext();
+          const ctx = await resolveTenantContext();
 
-          if (fileId) {
+          if (ctx.fileId) {
 
-            await loadDriveFileById(fileId, apiKey);
+            await loadDriveFileById(ctx.fileId, ctx.apiKey, ctx.tenantSlug);
+
+            return;
+
+          }
+
+          if (ctx.needsPicker) {
+
+            window.DrivePilot._chooseMode = true;
+
+            window.DrivePilot._folderFiles = ctx.files;
+
+            state.view = "upload";
+
+            if (typeof render === "function") render();
 
             return;
 
@@ -458,6 +556,8 @@
           console.error(err);
 
           state.view = "upload";
+
+          window.DrivePilot._chooseMode = false;
 
           if (typeof render === "function") render();
 
@@ -491,11 +591,11 @@
 
       showLoadingScreen();
 
-      const { fileId, apiKey } = await resolveTenantContext();
+      const ctx = await resolveTenantContext();
 
-      if (!fileId) throw new Error("No class data file found.");
+      if (!ctx.fileId) throw new Error("No class data file found.");
 
-      await loadDriveFileById(fileId, apiKey);
+      await loadDriveFileById(ctx.fileId, ctx.apiKey, ctx.tenantSlug);
 
     },
 
@@ -529,7 +629,7 @@
 
       }
 
-      el.innerHTML = "<strong>Web</strong> — Reading Adventures from Google Drive" + extra + ' <span class="opacity-60">(pilot v2)</span>';
+      el.innerHTML = "<strong>Web</strong> — Reading Adventures from Google Drive" + extra + ' <span class="opacity-60">(pilot v3)</span>';
 
     },
 

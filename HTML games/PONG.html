@@ -161,6 +161,7 @@
     font-family: 'Andika', 'Comic Sans MS', system-ui, sans-serif;
     letter-spacing: 0.02em;
   }
+  body.embedded .stats { display: none; }
 </style>
 </head>
 <body>
@@ -258,14 +259,23 @@
 
   // Focus words from parent (Reading Adventures)
   let focusWords = [];
+  function focusItemLabel(word) {
+    if (!word) return '';
+    if (word.label) return String(word.label);
+    const v = String(word.value || '');
+    const sep = v.indexOf('\u0001');
+    if (word.type === 'gpc' && sep >= 0) return v.slice(0, sep);
+    return v;
+  }
+
   function setFocusWords(words) {
     if (!Array.isArray(words)) return;
     focusWords = words.filter(w => w && w.value);
   }
-  function speakFocusWord(text) {
-    if (!text) return;
+  function speakFocusWord(item) {
+    if (!item) return;
     if (embedded && window.parent !== window) {
-      try { window.parent.postMessage({ type: 'pong-speak', word: text }, '*'); } catch (e) {}
+      try { window.parent.postMessage({ type: 'pong-speak', item }, '*'); } catch (e) {}
     }
   }
   if (embedded) {
@@ -278,7 +288,7 @@
   // Constants
   const PADDLE_W = 12, PADDLE_H = 90;
   const BALL_SIZE = 12;
-  const WIN_SCORE = 6;
+  const WIN_SCORE = 3;
   const BASE_BALL_SPEED = 5.5;
   const BASE_AI_SPEED = 3;
   const AI_REACT_THRESHOLD = W * 0.45;
@@ -295,6 +305,7 @@
   let speedMultiplier = 1;
   let running = false;
   let gameOver = false;
+  let winCelebration = null;
   let mouseY = H / 2;
   let playStartAt = 0;            // timestamp of current play start
   let nextPowerUpAt = 0;
@@ -329,12 +340,52 @@
     powerUps = [];
   }
 
+  function spawnWinExplosion(paddle) {
+    const cx = paddle.x + paddle.w / 2;
+    const cy = paddle.y + paddle.h / 2;
+    const particles = [];
+    const colors = ['#ff4466', '#ff8844', '#ffcc00', '#ffffff', '#ff2255'];
+    for (let i = 0; i < 48; i++) {
+      const angle = (Math.PI * 2 * i) / 48 + Math.random() * 0.4;
+      const speed = 2 + Math.random() * 6;
+      particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        color: colors[i % colors.length],
+        size: 3 + Math.random() * 5,
+      });
+    }
+    return particles;
+  }
+
+  function startWinCelebration(playerWon) {
+    const loser = playerWon ? ai : player;
+    winCelebration = {
+      playerWon,
+      particles: spawnWinExplosion(loser),
+      startedAt: performance.now(),
+      notified: false,
+    };
+    balls = [];
+    powerUps = [];
+    beep(playerWon ? 523 : 300, 0.15, playerWon ? 'triangle' : 'sawtooth', 0.2);
+    if (playerWon) {
+      setTimeout(() => beep(659, 0.15, 'triangle', 0.2), 150);
+      setTimeout(() => beep(784, 0.3, 'triangle', 0.2), 300);
+    } else {
+      setTimeout(() => beep(200, 0.4, 'sawtooth', 0.2), 200);
+    }
+  }
+
   function resetGame() {
     scores.player = 0;
     scores.ai = 0;
     hits = 0;
     speedMultiplier = 1;
     gameOver = false;
+    winCelebration = null;
     balls = [];
     powerUps = [];
     respawnScheduled = false;
@@ -453,12 +504,12 @@
 
   function powerUpRadius(word) {
     if (!word) return 18;
-    const len = String(word.value).length;
+    const len = focusItemLabel(word).length;
     return Math.max(20, Math.min(38, 16 + len * 3.5));
   }
 
   function powerUpLabelFont(word, radius) {
-    const len = String(word.value).length;
+    const len = focusItemLabel(word).length;
     const size = len <= 2 ? Math.round(radius * 0.95)
       : len <= 5 ? Math.round(radius * 0.72)
       : Math.round(radius * 0.58);
@@ -484,7 +535,7 @@
   function applyPowerUp(ball, powerUp) {
     const type = powerUp.type;
     powerUpSound(type);
-    if (powerUp.word && powerUp.word.value) speakFocusWord(powerUp.word.value);
+    if (powerUp.word) speakFocusWord(powerUp.word);
     if (type === 'black') {
       if (balls.length >= MAX_BALLS) return;
       const speed = Math.hypot(ball.vx, ball.vy);
@@ -552,6 +603,24 @@
   }
 
   function update(now) {
+    if (winCelebration) {
+      for (const p of winCelebration.particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.12;
+        p.life -= 0.018;
+      }
+      winCelebration.particles = winCelebration.particles.filter(p => p.life > 0);
+      if (!winCelebration.notified && now - winCelebration.startedAt >= 3000) {
+        winCelebration.notified = true;
+        if (embedded && window.parent !== window) {
+          try {
+            window.parent.postMessage({ type: 'pong-game-over', won: winCelebration.playerWon }, '*');
+          } catch (e) {}
+        }
+      }
+      return;
+    }
     if (!running || gameOver) return;
 
     const targetY = mouseY - PADDLE_H / 2;
@@ -721,6 +790,10 @@
       gameOver = true;
       running = false;
       const won = scores.player >= WIN_SCORE;
+      if (embedded) {
+        startWinCelebration(won);
+        return true;
+      }
       overlayTitle.textContent = won ? 'YOU WIN!' : 'YOU LOSE';
       overlayTitle.style.color = won ? '#00ff88' : '#ff4466';
       overlayTitle.style.textShadow = won ? '0 0 15px #00ff88' : '0 0 15px #ff4466';
@@ -731,9 +804,6 @@
         beep(523, 0.15, 'triangle', 0.2);
         setTimeout(() => beep(659, 0.15, 'triangle', 0.2), 150);
         setTimeout(() => beep(784, 0.3, 'triangle', 0.2), 300);
-        if (embedded && window.parent !== window) {
-          try { window.parent.postMessage({ type: 'pong-win' }, '*'); } catch (e) {}
-        }
       } else {
         beep(300, 0.2, 'sawtooth', 0.2);
         setTimeout(() => beep(200, 0.4, 'sawtooth', 0.2), 200);
@@ -801,12 +871,12 @@
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      if (p.word && p.word.value) {
+      if (p.word) {
         ctx.fillStyle = powerUpTextColor(p.type);
         ctx.font = powerUpLabelFont(p.word, p.r * pulse);
         ctx.shadowColor = POWERUP_LIGHT.has(p.type) ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.85)';
         ctx.shadowBlur = 4;
-        ctx.fillText(p.word.value, p.x, p.y + 1);
+        ctx.fillText(focusItemLabel(p.word), p.x, p.y + 1);
         ctx.shadowBlur = 0;
       } else {
         ctx.fillStyle = powerUpTextColor(p.type);
@@ -820,10 +890,33 @@
     ctx.fillStyle = '#00ff88';
     ctx.shadowColor = '#00ff88';
     ctx.shadowBlur = 10;
-    ctx.fillRect(player.x, player.y, player.w, player.h);
-    ctx.fillRect(ai.x, ai.y, ai.w, ai.h);
+    const showPlayerPaddle = !winCelebration || winCelebration.playerWon;
+    const showAiPaddle = !winCelebration || !winCelebration.playerWon;
+    if (showPlayerPaddle) ctx.fillRect(player.x, player.y, player.w, player.h);
+    if (showAiPaddle) ctx.fillRect(ai.x, ai.y, ai.w, ai.h);
     ctx.shadowBlur = 0;
 
+    if (winCelebration) {
+      for (const p of winCelebration.particles) {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      const winnerX = winCelebration.playerWon ? W * 0.25 : W * 0.75;
+      ctx.fillStyle = winCelebration.playerWon ? '#00ff88' : '#ffcc00';
+      ctx.font = "bold 42px 'Courier New', monospace";
+      ctx.textAlign = 'center';
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 18;
+      ctx.fillText('WINNER', winnerX, H * 0.42);
+      ctx.shadowBlur = 0;
+    }
+
+    if (!winCelebration) {
     for (const ball of balls) {
       const color = ballColor(ball);
 
@@ -849,6 +942,7 @@
         ctx.arc(ball.x + ball.size/2, ball.y + ball.size/2, ball.size, -Math.PI/2, -Math.PI/2 + Math.PI*2*frac);
         ctx.stroke();
       }
+    }
     }
   }
 

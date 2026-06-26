@@ -416,15 +416,24 @@
     }
   }
 
+  function focusItemLabel(word) {
+    if (!word) return '';
+    if (word.label) return String(word.label);
+    const v = String(word.value || '');
+    const sep = v.indexOf('\u0001');
+    if (word.type === 'gpc' && sep >= 0) return v.slice(0, sep);
+    return v;
+  }
+
   function setFocusWords(words) {
     if (!Array.isArray(words)) return;
     focusWords = words.filter(w => w && w.value);
   }
 
-  function speakWord(text) {
-    if (!text) return;
+  function speakFocusItem(item) {
+    if (!item) return;
     if (embedded && window.parent !== window) {
-      try { window.parent.postMessage({ type: 'treasure-speak', word: text }, '*'); } catch (e) {}
+      try { window.parent.postMessage({ type: 'treasure-speak', item }, '*'); } catch (e) {}
     }
   }
 
@@ -475,7 +484,7 @@
         for (let c = col - 1; c <= col + 1; c++) {
           if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS) {
             const idx = cellIndex(r, c);
-            if (newGrid[idx] && (newGrid[idx].isTreasure || newGrid[idx].isBonus)) count++;
+            if (newGrid[idx] && newGrid[idx].isTreasure) count++;
           }
         }
       }
@@ -511,7 +520,7 @@
     if (gameOver || revealed[index] || clicksLeft <= 0) return;
 
     const word = tileWords[index];
-    if (word && word.value) speakWord(word.value);
+    if (word) speakFocusItem(word);
 
     revealed[index] = true;
     lastFound = index;
@@ -593,7 +602,7 @@
     const isRevealed = revealed[index];
     const cell = grid[index];
     const word = tileWords[index];
-    const label = word ? word.value : '?';
+    const label = focusItemLabel(word);
     const hw = word && word.type === 'hw';
     const disabled = gameOver || isRevealed || clicksLeft <= 0;
 

@@ -1,14 +1,83 @@
-{
-  "_config": {
-    "apiKey": "",
-    "label": "Deployment settings (not a school)"
-  },
-  "garethstorey20": {
-    "label": "Garethstorey20",
-    "provider": "google-drive",
-    "folderId": "1_kAzapYEnIYRWuNLEVUcp6USiJBCExuM",
-    "classDataFileId": "",
-    "classDataFileName": "class-data.json"
-  }
-}
-
+{
+  "_config": {
+    "apiKey": "",
+    "label": "Deployment settings (not a school)"
+  },
+  "garethstorey20": {
+    "label": "Garethstorey20",
+    "provider": "google-drive",
+    "folderId": "1_kAzapYEnIYRWuNLEVUcp6USiJBCExuM",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-cedar-4m8": {
+    "label": "Cedar Grove Primary",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-birch-7k2": {
+    "label": "Birch Lane School",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-maple-9n1": {
+    "label": "Maple View Academy",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-willow-3p6": {
+    "label": "Willow Brook Primary",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-aspen-8r4": {
+    "label": "Aspen Hill School",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-oak-2t7": {
+    "label": "Oak Meadow Primary",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-pine-5w9": {
+    "label": "Pine Ridge Academy",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-elder-6x3": {
+    "label": "Elder Park School",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-hazel-1y5": {
+    "label": "Hazel Wood Primary",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-rowan-0z8": {
+    "label": "Rowan Field School",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  }
+}

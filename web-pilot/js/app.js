@@ -17,22 +17,31 @@ const CHALLENGE_ROUNDS = 6;
 const CATCH_ROUND_SEC = 7;
 const CATCH_MAX_LIVES = 5;
 const STARCADE_GAME_COST = 6;
-const STARCADE_TRACK_BONUS = 50;
+const READING_TRACK_BONUS = 20;
 const STARCADE_WIN_BONUS = 3;
 const TREASURE_SCORE_BONUS_THRESHOLD = 150;
 const READING_GAME_PERFECT_BONUS = 5;
+const READING_GAME_BASE_STARS = 3;
+const BOARD_MAX_PASSES = 3;
+const FLASH_SET_STAR_REWARD = 2;
+const FLASH_SET_MIN_SECONDS = 25;
 const FLASH_AUDIO_GAP_MS = 2000;
 const SOUND_BOX_AUDIO_GAP_MS = 1000;
 const SOUND_BOX_BLEND_STAGGER_MS = 500;
 const HW_BOX_HINT_MS = 3000;
 const GAME_ANSWER_FONT = "'Andika', 'Sassoon Primary', 'Comic Sans MS', system-ui, sans-serif";
-const TRACK_GAME_IDS = ['gpcMatch', 'gpcCatch', 'soundFlip', 'soundBox', 'hwHunt', 'hwBlank', 'hwBoxes', 'flash'];
+const GPC_TRACK_GAME_IDS = ['gpcMatch', 'gpcCatch', 'soundFlip', 'soundBox'];
+const HW_TRACK_GAME_IDS = ['hwHunt', 'hwBlank', 'hwJumble', 'hwBoxes'];
+const READING_TRACK_GAME_IDS = [...GPC_TRACK_GAME_IDS, ...HW_TRACK_GAME_IDS];
+const TRACK_GAME_IDS = READING_TRACK_GAME_IDS;
 
 const BOARD_SPACE_COUNT = 36;
 const BOARD_FINISH_INDEX = 35;
 const BOARD_COLS = 6;
-const BOARD_FINISH_BONUS = 20;
-const BOARD_GAME_SEQUENCE = ['gpcMatch', 'gpcCatch', 'soundFlip', 'soundBox', 'hwHunt', 'hwBlank', 'hwBoxes'];
+const TAG_ME_BOARD_COLS_PORTRAIT = 6;
+const TAG_ME_BOARD_COLS_LANDSCAPE = 9;
+const BOARD_FINISH_BONUS = 30;
+const BOARD_GAME_SEQUENCE = ['gpcMatch', 'gpcCatch', 'soundFlip', 'soundBox', 'hwHunt', 'hwBlank', 'hwJumble', 'hwBoxes'];
 const BOARD_GAME_STYLE = {
   gpcMatch: { bg: '#2563eb', text: '#ffffff', border: '#93c5fd' },
   gpcCatch: { bg: '#0891b2', text: '#ffffff', border: '#67e8f9' },
@@ -40,6 +49,7 @@ const BOARD_GAME_STYLE = {
   soundBox: { bg: '#4f46e5', text: '#ffffff', border: '#a5b4fc' },
   hwHunt: { bg: '#db2777', text: '#ffffff', border: '#f9a8d4' },
   hwBlank: { bg: '#e11d48', text: '#ffffff', border: '#fda4af' },
+  hwJumble: { bg: '#f43f5e', text: '#ffffff', border: '#fda4af' },
   hwBoxes: { bg: '#ea580c', text: '#ffffff', border: '#fdba74' },
   flash: { bg: '#16a34a', text: '#ffffff', border: '#86efac' },
 };
@@ -56,6 +66,7 @@ const GAME_BOARD_TITLES = {
   soundBox: 'Sound Box',
   hwHunt: 'Splat the Word!',
   hwBlank: 'Word Challenge!',
+  hwJumble: 'Word Jumble',
   hwBoxes: 'Word Box',
   flash: 'Self Check',
 };
@@ -66,6 +77,7 @@ const GAME_BOARD_SHORT = {
   soundBox: 'Box',
   hwHunt: 'Word',
   hwBlank: 'Blank',
+  hwJumble: 'Jumble',
   hwBoxes: 'Spell',
   flash: 'Check',
 };
@@ -77,6 +89,36 @@ const BOARD_PIECES = [
   { emoji: '⚽', bg: '#14b8a6' }, { emoji: '🍕', bg: '#ef4444' }, { emoji: '🎈', bg: '#8b5cf6' },
   { emoji: '🦄', bg: '#d946ef' }, { emoji: '🐢', bg: '#10b981' }, { emoji: '🦖', bg: '#84cc16' },
   { emoji: '🎨', bg: '#0ea5e9' }, { emoji: '🍀', bg: '#22c55e' },
+];
+const TAG_CHASERS = [
+  { id: 'lion', emoji: '🦁', name: 'Lion', bg: '#eab308', catchLine: 'I caught you with my big roar!' },
+  { id: 'tiger', emoji: '🐯', name: 'Tiger', bg: '#f97316', catchLine: 'I got you with my fast stripes!' },
+  { id: 'bear', emoji: '🐻', name: 'Bear', bg: '#a16207', catchLine: 'I tagged you with my big paws!' },
+  { id: 'wolf', emoji: '🐺', name: 'Wolf', bg: '#64748b', catchLine: 'I found you with my sharp eyes!' },
+  { id: 'ghost', emoji: '👻', name: 'Ghost', bg: '#cbd5e1', catchLine: 'Boo! I tagged you!' },
+  { id: 'butterfly', emoji: '🦋', name: 'Butterfly', bg: '#e879f9', catchLine: 'I fluttered and tagged you!' },
+  { id: 'fairy', emoji: '🧚', name: 'Fairy', bg: '#c084fc', catchLine: 'I sprinkled magic and got you!' },
+];
+const TAG_FREE_ROLLS = 2;
+const TAG_FINISH_BONUS = 30;
+const TAG_MODIFIER_BACK1 = new Set([8, 20, 5, 26, 29]);
+const TAG_MODIFIER_BACK2 = new Set([11, 34, 30]);
+const TAG_MODIFIER_FWD1 = new Set([24, 15, 27, 2, 18]);
+const TAG_MODIFIER_FWD2 = new Set([23, 33, 1]);
+const TAG_MODIFIER_STYLE = {
+  '-1': { bg: '#dc2626', text: '#fff', border: '#fecaca', icon: '⬇️' },
+  '-2': { bg: '#b91c1c', text: '#fff', border: '#fca5a5', icon: '⏬' },
+  '1': { bg: '#16a34a', text: '#fff', border: '#bbf7d0', icon: '⬆️' },
+  '2': { bg: '#15803d', text: '#fff', border: '#86efac', icon: '⏫' },
+};
+const TAG_ME_NEUTRAL_TILE = { bg: '#6366f1', text: '#ffffff', border: '#c7d2fe' };
+const TAG_ME_PATH_GLOW_COLORS = [
+  ['#ff00ff', 'rgba(255, 0, 255, 0.85)'],
+  ['#ff6600', 'rgba(255, 102, 0, 0.85)'],
+  ['#00ffff', 'rgba(0, 255, 255, 0.85)'],
+  ['#ffff00', 'rgba(255, 255, 0, 0.85)'],
+  ['#00ff88', 'rgba(0, 255, 136, 0.85)'],
+  ['#ff3366', 'rgba(255, 51, 102, 0.85)'],
 ];
 
 const state = {
@@ -95,8 +137,13 @@ const state = {
   arcade: null,
   arcadeGame: null,
   wordFocus: null,
+  profileRestoreScrollY: null,
+  readingTrackBonusPopup: false,
   boardRolling: false,
   boardGame: {},
+  tagMeGame: {},
+  tagMeBoardLayout: null,
+  boardReturnView: 'adventure',
   arcadeFromBoard: false,
   /** Per-student shuffle decks for answer cycling across games in one session. */
   focusCycleDecks: {},
@@ -202,14 +249,63 @@ function resolveImportedAudioEntry(entry, depth = 0, seen = null) {
   return null;
 }
 
-function getClassAudioSource(text) {
+function lookupClassAudioBucket(src, raw) {
+  if (!src || raw == null || raw === '') return null;
+  const s = String(raw);
+  if (src[s]) return src[s];
+  const lower = s.toLowerCase();
+  if (lower !== s && src[lower]) return src[lower];
+  if (!s.includes(GPC_AUDIO_SEP)) {
+    const norm = normalizeGpcKey(s);
+    if (norm !== s && src[norm]) return src[norm];
+  }
+  return null;
+}
+
+function getClassGpcAudioSource(phoneme, exampleWord) {
+  if (!state.data || !state.classKey) return null;
+  const cls = state.data.classes[state.classKey];
+  const src = cls?.audio?.gpc;
+  if (!src) return null;
+  const g = String(phoneme ?? '').trim();
+  if (!g) return null;
+  const ex = String(exampleWord ?? '').trim();
+  const keys = [
+    gpcAudioStorageKey(g, ex),
+    g,
+  ].filter(Boolean);
+  for (const raw of keys) {
+    const entry = lookupClassAudioBucket(src, raw);
+    if (!entry) continue;
+    const resolved = resolveImportedAudioEntry(entry);
+    if (resolved) return resolved;
+  }
+  // Assessment Buddy: one slot per phoneme may store audio under bare phoneme key.
+  const compositeKey = gpcAudioStorageKey(g, ex);
+  if (compositeKey) {
+    const slots = collectClassGpcItems(cls).filter(x => normalizeGpcKey(x.gpc) === normalizeGpcKey(g));
+    if (slots.length === 1 && gpcAudioStorageKey(slots[0].gpc, slots[0].exampleWord) === compositeKey) {
+      const entry = lookupClassAudioBucket(src, g);
+      if (entry) {
+        const resolved = resolveImportedAudioEntry(entry);
+        if (resolved) return resolved;
+      }
+    }
+  }
+  return null;
+}
+
+function getClassHwAudioSource(text) {
   if (!state.data || !state.classKey) return null;
   const cls = state.data.classes[state.classKey];
   if (!cls?.audio) return null;
-  const sources = [cls.audio.gpc, cls.audio.hw, cls.audio.heartWords, cls.audio.heart];
+  const raw = String(text ?? '').trim();
+  if (!raw) return null;
+  const sources = [cls.audio.hw, cls.audio.heartWords, cls.audio.heart, cls.audio.example];
   for (const src of sources) {
-    if (src?.[text]) {
-      const resolved = resolveImportedAudioEntry(src[text]);
+    const entry = lookupClassAudioBucket(src, raw);
+    if (entry) {
+      const resolved = resolveImportedAudioEntry(entry);
       if (resolved) return resolved;
     }
   }
@@ -241,14 +337,53 @@ function getMasterGpcAudioSource(text) {
   return null;
 }
 
-function getAudioSource(text) {
-  return getClassAudioSource(text) || getMasterGpcAudioSource(text);
+function getGpcAudioSource(phonemeOrKey, exampleWord) {
+  let phoneme = phonemeOrKey;
+  let ex = exampleWord;
+  if (!ex && String(phonemeOrKey ?? '').includes(GPC_AUDIO_SEP)) {
+    const parsed = parseGpcStorageKey(phonemeOrKey);
+    phoneme = parsed.phoneme;
+    ex = parsed.exampleWord;
+  }
+  return getClassGpcAudioSource(phoneme, ex) || getMasterGpcAudioSource(phoneme);
 }
-function hasAudio(text) { return !!getAudioSource(text); }
+
+function getHwAudioSource(text) {
+  return getClassHwAudioSource(text);
+}
+
+function getGameAudioTrack(gameType) {
+  if (['gpcMatch', 'gpcCatch', 'soundFlip', 'soundBox'].includes(gameType)) return 'gpc';
+  if (['hwHunt', 'hwBlank', 'hwJumble', 'hwBoxes'].includes(gameType)) return 'hw';
+  return null;
+}
+
+function getActiveAudioTrack() {
+  const gt = state.game?.type;
+  return gt ? getGameAudioTrack(gt) : null;
+}
+
+function getAudioSource(text, track) {
+  const t = track ?? getActiveAudioTrack();
+  if (t === 'hw') return getHwAudioSource(text);
+  if (t === 'gpc') return getGpcAudioSource(text);
+  return getGpcAudioSource(text) || getHwAudioSource(text);
+}
+
+function hasGpcItemAudio(item) {
+  if (!item) return false;
+  return !!getGpcAudioSource(item.gpc, item.exampleWord);
+}
+function hasAudio(text, track) { return !!getAudioSource(text, track ?? getActiveAudioTrack()); }
+
+/** Example-word clips from class JSON audio.example (and hw/heart buckets). */
+function hasExampleWordAudio(word) {
+  return !!getClassHwAudioSource(String(word ?? '').trim());
+}
 
 /** Listen button — always plays when the user taps 🔊. */
 function playTargetListen(text) {
-  if (text) speak(text);
+  if (text) speak(text, getActiveAudioTrack());
 }
 
 /**
@@ -256,24 +391,31 @@ function playTargetListen(text) {
  * once when the learner answers correctly. Wrong/timeout does not auto-play.
  */
 function playTargetOnShow(g, text) {
-  if (!text || !hasAudio(text) || !g || g._spoken) return;
+  if (!text || !g || g._spoken) return;
+  const track = getGameAudioTrack(g.type);
+  if (!hasAudio(text, track)) return;
   g._spoken = true;
-  speak(text);
+  speak(text, track);
 }
 
 function playTargetOnCorrect(g, text) {
-  if (!text || !hasAudio(text) || !g || g._spokenCorrect) return;
+  if (!text || !g || g._spokenCorrect) return;
+  const track = getGameAudioTrack(g.type);
+  if (!hasAudio(text, track)) return;
   g._spokenCorrect = true;
-  speak(text);
+  speak(text, track);
 }
 
 /** Self Check: wait at least 2s after previous clip before auto-playing the next card. */
 function playFlashTargetOnShow(g, text) {
-  if (!text || !hasAudio(text) || !g || g._spoken) return;
+  if (!text || !g || g._spoken) return;
+  const card = g.cards?.[g.cardIdx];
+  const track = card?.type === 'hw' ? 'hw' : card?.type === 'gpc' ? 'gpc' : null;
+  if (!hasAudio(text, track)) return;
   g._spoken = true;
   const gapWait = Math.max(0, _lastAudioEndAt + FLASH_AUDIO_GAP_MS - Date.now());
   const delay = Math.max(300, gapWait);
-  setTimeout(() => speak(text), delay);
+  setTimeout(() => speak(text, track), delay);
 }
 
 function getGameProgressText(g) {
@@ -285,7 +427,8 @@ function getGameProgressText(g) {
   if (g.type === 'gpcCatch') {
     if (g.catchPhase !== 'play') return '';
     const total = g.correctNeeded || CHALLENGE_ROUNDS;
-    return `${Math.min(g.correct, total)}/${total}`;
+    const q = Math.min((g.roundIdx || 0) + 1, total);
+    return `${q}/${total}`;
   }
   const total = g.totalRounds || CHALLENGE_ROUNDS;
   return `${Math.min(g.roundIdx, total)}/${total}`;
@@ -327,8 +470,8 @@ function resetTargetAudioFlags(g) {
 
 let _lastAudioEndAt = 0;
 
-function speak(text) {
-  const audioData = getAudioSource(text);
+function speak(text, track) {
+  const audioData = getAudioSource(text, track ?? getActiveAudioTrack());
   if (audioData) {
     try {
       const audio = new Audio(audioData);
@@ -342,9 +485,9 @@ function speak(text) {
   return false;
 }
 
-function speakWithCallback(text, onDone) {
+function speakWithCallback(text, onDone, track) {
   const done = () => { if (onDone) onDone(); };
-  const audioData = getAudioSource(text);
+  const audioData = getAudioSource(text, track ?? getActiveAudioTrack());
   if (!audioData) { done(); return false; }
   try {
     const audio = new Audio(audioData);
@@ -813,8 +956,40 @@ function buildBlankChallengeOptions(target, curatedD, targetPool, needCount = 3)
 function normalizeHwBlankSentence(s) {
   return String(s || '')
     .trim()
+    .replace(/\*\*([^*]+)\*\*/gi, '_____')
+    .replace(/\*\*/g, '')
     .replace(/\s+/g, ' ')
     .replace(/_{2,}/g, '_____');
+}
+
+/** Merge Fry/CSV sentences into HW_SENTENCES (CSV lines first, then any embedded extras). */
+function mergeHwSentenceRecords(word, sentenceStrings, typeRaw) {
+  const key = String(word ?? '').trim().toLowerCase();
+  if (!key) return false;
+  const incoming = (sentenceStrings || [])
+    .map(s => normalizeHwBlankSentence(s))
+    .filter(s => s.length > 0 && /_____/.test(s));
+  if (incoming.length === 0) return false;
+
+  const existing = HW_SENTENCES[key] || [];
+  const seen = new Set();
+  const merged = [];
+  for (const s of incoming) {
+    if (seen.has(s)) continue;
+    seen.add(s);
+    const prev = existing.find(e => normalizeHwBlankSentence(e.s) === s);
+    merged.push({ s, d: prev?.d?.length ? prev.d : null });
+  }
+  for (const e of existing) {
+    const s = normalizeHwBlankSentence(e.s);
+    if (!s || !/_____/.test(s) || seen.has(s)) continue;
+    seen.add(s);
+    merged.push({ s, d: e.d?.length ? e.d : null });
+  }
+  HW_SENTENCES[key] = merged;
+  const type = normalizeWordType(typeRaw);
+  if (type) HW_WORD_TYPES[key] = type;
+  return true;
 }
 
 /** Parse UTF-8 CSV (quoted fields, commas inside quotes). */
@@ -878,16 +1053,10 @@ function registerHwSentenceBatchCsv(csvText, batchLabel = 'batch') {
     const word = String(row[iWord] || '').trim().toLowerCase();
     if (!word) { skipped++; continue; }
     const typeRaw = iType >= 0 ? String(row[iType] || '').trim() : '';
-    const type = normalizeWordType(typeRaw) || 'other';
-    const sentences = [iS1, iS2, iS3]
-      .filter(i => i >= 0)
-      .map(i => normalizeHwBlankSentence(row[i]))
-      .filter(s => s.length > 0 && /_____/.test(s));
-    if (sentences.length === 0) { skipped++; continue; }
-    const had = !!HW_SENTENCES[word];
-    HW_WORD_TYPES[word] = type;
-    HW_SENTENCES[word] = sentences.map(s => ({ s, d: null }));
-    if (had) updated++;
+    const rawSentences = [iS1, iS2, iS3].filter(i => i >= 0).map(i => row[i]);
+    const hadBefore = !!(HW_SENTENCES[word] && HW_SENTENCES[word].length);
+    if (!mergeHwSentenceRecords(word, rawSentences, typeRaw)) { skipped++; continue; }
+    if (hadBefore) updated++;
     else added++;
   }
   console.info(`[Word Challenge] ${batchLabel}: +${added} new, ${updated} updated, ${skipped} skipped`);
@@ -896,6 +1065,12 @@ function registerHwSentenceBatchCsv(csvText, batchLabel = 'batch') {
 
 function applyHwSentenceCsvBatches() {
   const list = window.__HW_BATCH_CSV_LIST__ || [];
+  if (!list.length) {
+    console.warn(
+      '[Word Challenge] No Fry sentence bank loaded. Ensure data/word-challenge/hw-sentence-bank.js is present, ' +
+      'then run: node data/word-challenge/integrate-fry-batch.js rebuild-all-fry'
+    );
+  }
   let total = { added: 0, updated: 0, skipped: 0 };
   list.forEach((csv, i) => {
     const stats = registerHwSentenceBatchCsv(csv, `batch-${i + 1}`);
@@ -903,7 +1078,7 @@ function applyHwSentenceCsvBatches() {
     total.updated += stats.updated;
     total.skipped += stats.skipped;
   });
-  if (list.length) console.info('[Word Challenge] Bank loaded:', total);
+  if (list.length) console.info('[Word Challenge] Fry sentence bank loaded:', total);
   return total;
 }
 
@@ -958,16 +1133,92 @@ function normalizeGpcKey(gpc) {
     .replaceAll('o-e', 'o_e');
 }
 
-function findGpcNeedItem(gpc, needs) {
+/** Matches Assessment Buddy export: phoneme + \u0001 + exampleWord in audio.gpc keys and game pool identity. */
+const GPC_AUDIO_SEP = '\u0001';
+
+function gpcAudioStorageKey(phoneme, exampleWord) {
+  const g = String(phoneme ?? '').trim();
+  const ex = String(exampleWord ?? '').trim();
+  if (!g) return '';
+  if (!ex) return g;
+  return g + GPC_AUDIO_SEP + ex;
+}
+
+function parseGpcStorageKey(key) {
+  const s = String(key ?? '');
+  const i = s.indexOf(GPC_AUDIO_SEP);
+  if (i < 0) return { phoneme: s, exampleWord: '' };
+  return { phoneme: s.slice(0, i), exampleWord: s.slice(i + 1) };
+}
+
+function gpcDisplayPhoneme(keyOrItem) {
+  if (keyOrItem && typeof keyOrItem === 'object') return String(keyOrItem.gpc ?? '').trim();
+  return parseGpcStorageKey(keyOrItem).phoneme;
+}
+
+function gpcPoolKey(item) {
+  if (!item) return '';
+  if (item.key) return item.key;
+  return gpcAudioStorageKey(item.gpc, item.exampleWord) || `${item.unitIdx}:${item.slotIdx ?? 0}`;
+}
+
+function gpcProfileLabel(item) {
+  const g = String(item?.gpc ?? '').trim();
+  const ex = String(item?.exampleWord ?? '').trim();
+  return ex ? `${g} · ${ex}` : g;
+}
+
+function formatGpcOptionLabel(poolKey, allKeys) {
+  const { phoneme, exampleWord } = parseGpcStorageKey(poolKey);
+  const dupes = (allKeys || []).filter(k =>
+    gpcDisplayPhoneme(k).toLowerCase() === phoneme.toLowerCase()
+  );
+  if (dupes.length > 1 && exampleWord) {
+    return `${escapeHtmlText(phoneme)}<span class="text-base opacity-80 font-semibold"> · ${escapeHtmlText(exampleWord)}</span>`;
+  }
+  return escapeHtmlText(phoneme);
+}
+
+function findGpcNeedItem(gpc, needs, exampleWord) {
+  const keyStr = String(gpc ?? '');
+  if (keyStr.includes(GPC_AUDIO_SEP)) {
+    const { phoneme, exampleWord: ex } = parseGpcStorageKey(keyStr);
+    if (needs) {
+      const hit = [...needs.targetGpcs, ...needs.masteredGpcs].find(x =>
+        normalizeGpcKey(x.gpc) === normalizeGpcKey(phoneme) &&
+        String(x.exampleWord ?? '').trim().toLowerCase() === ex.toLowerCase()
+      );
+      if (hit) return hit;
+    }
+    return findGpcInClass(phoneme, ex);
+  }
   const key = normalizeGpcKey(gpc);
-  if (!key || !needs) return null;
+  if (!key || !needs) {
+    const ph = gpcDisplayPhoneme(gpc);
+    const ex = exampleWord || parseGpcStorageKey(gpc).exampleWord || '';
+    return findGpcInClass(ph, ex);
+  }
   const matches = [...needs.targetGpcs, ...needs.masteredGpcs]
     .filter(x => normalizeGpcKey(x.gpc) === key);
-  if (!matches.length) return null;
+  if (!matches.length) {
+    const ph = gpcDisplayPhoneme(gpc);
+    const ex = exampleWord || parseGpcStorageKey(gpc).exampleWord || '';
+    return findGpcInClass(ph, ex);
+  }
+  if (exampleWord) {
+    const ex = String(exampleWord).trim().toLowerCase();
+    const exMatch = matches.find(x => String(x.exampleWord ?? '').trim().toLowerCase() === ex);
+    if (exMatch) return exMatch;
+  }
   const inTargets = matches.find(x =>
-    needs.targetGpcs.some(t => t.unitIdx === x.unitIdx && normalizeGpcKey(t.gpc) === key)
+    needs.targetGpcs.some(t => gpcPoolKey(t) === gpcPoolKey(x))
   );
-  return inTargets || matches[0];
+  const withAudio = matches.find(x => hasGpcItemAudio(x));
+  const item = inTargets || withAudio || matches[0];
+  if (item) return item;
+  const ph = gpcDisplayPhoneme(gpc);
+  const ex = exampleWord || parseGpcStorageKey(gpc).exampleWord || '';
+  return findGpcInClass(ph, ex);
 }
 
 function pickLongVowelGpcExample(gpc, unitName) {
@@ -997,35 +1248,130 @@ function pickLongVowelGpcExample(gpc, unitName) {
 }
 
 function resolveGpcExampleWord(gpc) {
-  if (!state.selectedStudent || !isValidGameToken(gpc)) return '';
-  const needs = getStudentNeeds(state.selectedStudent);
+  if (!state.selectedStudent || !isValidGameToken(gpcDisplayPhoneme(gpc))) return '';
+  if (String(gpc ?? '').includes(GPC_AUDIO_SEP)) {
+    return parseGpcStorageKey(gpc).exampleWord;
+  }
+  const needs = state.selectedStudent ? getStudentNeeds(state.selectedStudent) : null;
   const item = findGpcNeedItem(gpc, needs);
   if (item?.exampleWord) return item.exampleWord;
-  return pickLongVowelGpcExample(gpc, item?.unit);
+  return pickLongVowelGpcExample(gpcDisplayPhoneme(gpc), item?.unit);
 }
 
-function getLongVowelBlankEntries(word, pool) {
-  const key = HW_BLANK_ALIASES[String(word).toLowerCase()] || String(word).toLowerCase();
-  const entry = LONG_VOWEL_WORD_INDEX[key];
-  if (!entry?.sentences?.length) return null;
-  return entry.sentences.map(s => ({
-    s,
-    d: pickBlankDistractorsPreferType(word, pool, 3),
-  }));
+function collectHwBlankSentenceLines(word) {
+  const key = getHwSentenceKey(word);
+  const lower = key.toLowerCase();
+  const lines = [];
+  const seen = new Set();
+  const addLine = (s) => {
+    const norm = normalizeHwBlankSentence(s);
+    if (!norm || !/_____/.test(norm) || seen.has(norm)) return;
+    seen.add(norm);
+    lines.push(norm);
+  };
+
+  const longEntry = LONG_VOWEL_WORD_INDEX[key] || LONG_VOWEL_WORD_INDEX[lower];
+  longEntry?.sentences?.forEach(addLine);
+
+  const curated = HW_SENTENCES[key] || HW_SENTENCES[lower];
+  curated?.forEach(e => addLine(e.s));
+
+  const numberStock = HW_NUMBER_WORD_SENTENCES[key] || HW_NUMBER_WORD_SENTENCES[lower];
+  numberStock?.forEach(e => addLine(e.s));
+
+  return { key, lines, curated };
 }
+
+/** Stock blank sentences for number words missing from Fry CSV batches (e.g. nine). */
+const HW_NUMBER_WORD_SENTENCES = {
+  zero: [
+    { s: 'I see _____ ducks.', d: null },
+    { s: 'We have _____ pets.', d: null },
+    { s: 'There are _____ cats here.', d: null },
+  ],
+  one: [
+    { s: 'I have _____ dog.', d: null },
+    { s: 'Pick _____ apple, please.', d: null },
+    { s: '_____ bird is on the roof.', d: null },
+  ],
+  two: [
+    { s: 'I have _____ cats.', d: null },
+    { s: 'She is _____ years old.', d: null },
+    { s: '_____ birds are in the tree.', d: null },
+  ],
+  three: [
+    { s: 'I see _____ ducks.', d: null },
+    { s: 'We have _____ books.', d: null },
+    { s: '_____ frogs jumped in the pond.', d: null },
+  ],
+  four: [
+    { s: 'I ate _____ buns.', d: null },
+    { s: 'There are _____ chairs.', d: null },
+    { s: 'She has _____ pens.', d: null },
+  ],
+  five: [
+    { s: 'I have _____ fingers up.', d: null },
+    { s: 'We saw _____ dogs.', d: null },
+    { s: '_____ stars are bright.', d: null },
+  ],
+  six: [
+    { s: 'I am _____ years old.', d: null },
+    { s: 'We have _____ eggs.', d: null },
+    { s: '_____ ducks swam away.', d: null },
+  ],
+  seven: [
+    { s: 'I see _____ birds.', d: null },
+    { s: 'We have _____ days left.', d: null },
+    { s: '_____ frogs are green.', d: null },
+  ],
+  eight: [
+    { s: 'I have _____ crayons.', d: null },
+    { s: 'We ate _____ apples.', d: null },
+    { s: '_____ ducks are on the pond.', d: null },
+  ],
+  nine: [
+    { s: 'I ate _____ buns.', d: null },
+    { s: 'She has _____ crayons.', d: null },
+    { s: 'We saw _____ birds.', d: null },
+  ],
+  ten: [
+    { s: 'I can count to _____.', d: null },
+    { s: 'We have _____ toes.', d: null },
+    { s: '_____ ducks swam in a row.', d: null },
+  ],
+  eleven: [
+    { s: 'I am _____ years old.', d: null },
+    { s: 'We have _____ players.', d: null },
+    { s: '_____ birds sat on the wire.', d: null },
+  ],
+  twelve: [
+    { s: 'There are _____ months in a year.', d: null },
+    { s: 'I see _____ eggs in the box.', d: null },
+    { s: 'We ate _____ buns.', d: null },
+  ],
+};
 
 /** Curated HW_SENTENCES (+ CSV batches); minimal fallback only when no entry exists. */
+function getHwSentenceKey(word) {
+  const raw = String(word ?? '').trim();
+  if (!raw) return '';
+  if (HW_SENTENCES[raw] || LONG_VOWEL_WORD_INDEX[raw] || HW_NUMBER_WORD_SENTENCES[raw]) return raw;
+  const lower = raw.toLowerCase();
+  if (HW_BLANK_ALIASES[lower]) return HW_BLANK_ALIASES[lower];
+  if (HW_SENTENCES[lower] || LONG_VOWEL_WORD_INDEX[lower] || HW_NUMBER_WORD_SENTENCES[lower]) return lower;
+  return lower;
+}
+
 function getHwBlankEntries(word, pool) {
-  const raw = String(word).toLowerCase();
-  const key = HW_BLANK_ALIASES[raw] || raw;
-  const fromLong = getLongVowelBlankEntries(word, pool);
-  if (fromLong?.length) return fromLong;
-  const curated = HW_SENTENCES[key];
-  if (curated && curated.length) {
-    return curated.map(e => ({
-      s: e.s,
-      d: (e.d && e.d.length) ? e.d : pickBlankDistractorsPreferType(word, pool, 3),
-    }));
+  const { lines, curated } = collectHwBlankSentenceLines(word);
+  if (lines.length > 0) {
+    return lines.map(s => {
+      const match = curated?.find(e => normalizeHwBlankSentence(e.s) === s);
+      return {
+        s,
+        d: (match?.d && match.d.length) ? match.d : pickBlankDistractorsPreferType(word, pool, 3),
+      };
+    });
   }
   return [{
     s: 'Listen. The word is _____.',
@@ -1116,7 +1462,7 @@ function awardStarcadeWinBonus(key) {
 
 function gameEndScoreTotal(g) {
   if (g.type === 'flash') return g.cards?.length || 0;
-  if (g.type === 'gpcCatch') return g.correctNeeded || CHALLENGE_ROUNDS;
+  if (g.type === 'gpcCatch') return g.attempts || g.roundIdx || CHALLENGE_ROUNDS;
   return g.totalRounds || CHALLENGE_ROUNDS;
 }
 
@@ -1124,9 +1470,7 @@ function isReadingGamePerfect(g) {
   if (!g.finished) return false;
   const total = gameEndScoreTotal(g);
   if (!total) return false;
-  if (g.correct !== total) return false;
-  if (g.type === 'gpcCatch') return !!g.won;
-  return !(g.history || []).some(h => h.correct === false);
+  return (g.correct || 0) === total;
 }
 
 // ============================================================
@@ -1178,6 +1522,21 @@ function pickFeedbackMessage(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+const SOUND_BOX_CORRECT_FEEDBACK = [
+  'Change the first sound and make a new word!',
+  'Yes! You put each sound in a box. Great job!',
+  'You did it! Every sound is in the right box.',
+  "That's correct! You matched each sound to its box.",
+  'Good job! You spelled the word sound by sound.',
+];
+
+function pickSoundBoxCorrectFeedback() {
+  if (state.soundBoxFeedbackCycle == null) state.soundBoxFeedbackCycle = 0;
+  const msg = SOUND_BOX_CORRECT_FEEDBACK[state.soundBoxFeedbackCycle];
+  state.soundBoxFeedbackCycle = (state.soundBoxFeedbackCycle + 1) % SOUND_BOX_CORRECT_FEEDBACK.length;
+  return msg;
+}
+
 /** String GPC or `{ gpc|sound, example|exampleWord }` with optional parallel gpcExamples[i]. */
 function parseGpcEntry(entry, exampleFromArray) {
   if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
@@ -1191,14 +1550,148 @@ function parseGpcEntry(entry, exampleFromArray) {
   };
 }
 
+/** One GPC slot from class unit content (Assessment Buddy shape). */
+function makeGpcItemFromUnitSlot(unit, uIdx, slotIdx) {
+  const gpcExamples = Array.isArray(unit.gpcExamples) ? unit.gpcExamples : [];
+  const { sound, example } = parseGpcEntry(unit.gpcs[slotIdx], gpcExamples[slotIdx]);
+  if (!isValidGameToken(sound)) return null;
+  const exampleWord = isValidGameToken(example) ? example : '';
+  return {
+    gpc: sound,
+    exampleWord,
+    unitIdx: uIdx,
+    slotIdx,
+    unit: unit.name,
+    key: gpcAudioStorageKey(sound, exampleWord) || `${uIdx}:${slotIdx}`,
+  };
+}
+
+/** All filled GPC slots defined in class units (source of truth for content + audio keys). */
+function collectClassGpcItems(cls) {
+  const items = [];
+  (cls?.units || []).forEach((unit, uIdx) => {
+    (unit.gpcs || []).forEach((_, slotIdx) => {
+      const item = makeGpcItemFromUnitSlot(unit, uIdx, slotIdx);
+      if (item) items.push(item);
+    });
+  });
+  return items;
+}
+
+/** Lookup a GPC slot in class unit definitions (not student mastery). */
+function findGpcInClass(phoneme, exampleWord) {
+  const cls = state.data?.classes?.[state.classKey];
+  if (!cls) return null;
+  const key = normalizeGpcKey(phoneme);
+  if (!key) return null;
+  const items = collectClassGpcItems(cls);
+  const ex = String(exampleWord ?? '').trim().toLowerCase();
+  if (ex) {
+    const hit = items.find(x =>
+      normalizeGpcKey(x.gpc) === key &&
+      String(x.exampleWord ?? '').trim().toLowerCase() === ex
+    );
+    if (hit) return hit;
+  }
+  const matches = items.filter(x => normalizeGpcKey(x.gpc) === key);
+  if (matches.length === 1) return matches[0];
+  const withEx = matches.find(x => String(x.exampleWord ?? '').trim());
+  if (withEx) return withEx;
+  return matches[0] || null;
+}
+
+function normalizeClassUnit(unit, index) {
+  if (!unit.name) unit.name = 'Unit ' + (index + 1);
+  if (!Array.isArray(unit.gpcs)) unit.gpcs = [];
+  if (!Array.isArray(unit.heartWords)) unit.heartWords = [];
+  if (!unit.carryOverUnit) {
+    const gpcN = unit.gpcSlotCount != null ? unit.gpcSlotCount : unit.gpcs.length;
+    const hwN = unit.hwSlotCount != null ? unit.hwSlotCount : unit.heartWords.length;
+    while (unit.gpcs.length < gpcN) unit.gpcs.push('');
+    while (unit.heartWords.length < hwN) unit.heartWords.push('');
+    if (!Array.isArray(unit.gpcExamples)) unit.gpcExamples = unit.gpcs.map(() => '');
+    while (unit.gpcExamples.length < gpcN) unit.gpcExamples.push('');
+    if (unit.gpcSlotCount != null) {
+      unit.gpcs.length = gpcN;
+      unit.gpcExamples.length = gpcN;
+    }
+    if (unit.hwSlotCount != null) unit.hwSlotCount = hwN;
+  } else if (!Array.isArray(unit.gpcExamples)) {
+    unit.gpcExamples = unit.gpcs.map(() => '');
+    while (unit.gpcExamples.length < unit.gpcs.length) unit.gpcExamples.push('');
+  }
+}
+
+function syncAssessmentObjectForClass(cls, assessment) {
+  if (!assessment) return;
+  if (!Array.isArray(assessment.units)) assessment.units = [];
+  while (assessment.units.length < (cls.units || []).length) {
+    assessment.units.push({ gpcs: [], hws: [] });
+  }
+  assessment.units.length = (cls.units || []).length;
+  (cls.units || []).forEach((unit, i) => {
+    const ua = assessment.units[i];
+    if (!ua) {
+      assessment.units[i] = { gpcs: [], hws: [] };
+      return;
+    }
+    if (!Array.isArray(ua.gpcs)) ua.gpcs = [];
+    if (!Array.isArray(ua.hws)) ua.hws = [];
+    const gpcLen = (unit.gpcs || []).length;
+    const hwLen = (unit.heartWords || []).length;
+    while (ua.gpcs.length < gpcLen) ua.gpcs.push(0);
+    ua.gpcs.length = gpcLen;
+    while (ua.hws.length < hwLen) ua.hws.push(0);
+    ua.hws.length = hwLen;
+  });
+}
+
+/** Align imported class with Assessment Buddy export (units, examples, assessment arrays). */
+function ensureClassStructure(cls) {
+  if (!cls) return;
+  if (!cls.assessments) cls.assessments = { baseline: {}, checkpoints: {} };
+  if (!cls.assessments.baseline) cls.assessments.baseline = {};
+  if (!cls.assessments.checkpoints) cls.assessments.checkpoints = {};
+  if (!Array.isArray(cls.checkpoints)) cls.checkpoints = [];
+  if (!Array.isArray(cls.units)) cls.units = [];
+  cls.units.forEach((u, i) => normalizeClassUnit(u, i));
+  if (!cls.audio || typeof cls.audio !== 'object') cls.audio = { gpc: {}, hw: {}, example: {} };
+  if (!cls.audio.gpc) cls.audio.gpc = {};
+  if (!cls.audio.hw) cls.audio.hw = {};
+  if (!cls.audio.example) cls.audio.example = {};
+  if (!Array.isArray(cls.students) || !cls.students.length) {
+    const names = new Set();
+    Object.keys(cls.assessments.baseline || {}).forEach(n => names.add(n));
+    Object.keys(cls.assessments.checkpoints || {}).forEach(cpId => {
+      Object.keys(cls.assessments.checkpoints[cpId] || {}).forEach(n => names.add(n));
+    });
+    cls.students = [...names].sort((a, b) => a.localeCompare(b));
+  }
+  Object.keys(cls.assessments.baseline || {}).forEach(sName => {
+    syncAssessmentObjectForClass(cls, cls.assessments.baseline[sName]);
+  });
+  Object.keys(cls.assessments.checkpoints || {}).forEach(cpId => {
+    Object.keys(cls.assessments.checkpoints[cpId] || {}).forEach(sName => {
+      syncAssessmentObjectForClass(cls, cls.assessments.checkpoints[cpId][sName]);
+    });
+  });
+}
+
+function normalizeImportedTrackerData(data) {
+  if (!data || !data.classes) return data;
+  for (const className of Object.keys(data.classes)) {
+    ensureClassStructure(data.classes[className]);
+  }
+  return data;
+}
+
 function lookupGpcExampleWord(gpc) {
   return resolveGpcExampleWord(gpc);
 }
 
 function getHwContextSnippet(word) {
-  const key = HW_BLANK_ALIASES[String(word).toLowerCase()] || String(word).toLowerCase();
-  const entry = LONG_VOWEL_WORD_INDEX[key];
-  let s = entry?.sentences?.[0] || HW_SENTENCES[key]?.[0]?.s;
+  const { lines } = collectHwBlankSentenceLines(word);
+  const s = lines[0];
   if (!s) return '';
   return String(s).replace(/_____/g, '…').trim();
 }
@@ -1210,10 +1703,41 @@ function renderGpcContextBar(exampleWord) {
 }
 
 /** Large top-left example hint for Splat the Sound / Sound Splat Challenge (no filled box). */
-function renderGpcExampleHint(exampleWord) {
+function renderGpcExampleHint(exampleWord, { flash = false } = {}) {
   const ex = String(exampleWord ?? '').trim();
   if (!ex) return '';
-  return `<p class="gpc-example-hint" aria-label="Example word ${ex}"><span class="gpc-example-hint-prefix">as in</span><span class="gpc-example-hint-word">${ex}</span></p>`;
+  const flashCls = flash ? ' gpc-example-hint--wrong' : '';
+  return `<p class="gpc-example-hint${flashCls}" aria-label="Example word ${ex}"><span class="gpc-example-hint-prefix">as in</span><span class="gpc-example-hint-word">${escapeHtmlText(ex)}</span></p>`;
+}
+
+function formatGpcCatchOptionLabel(poolKey) {
+  return escapeHtmlText(gpcDisplayPhoneme(poolKey));
+}
+
+function gpcSharesDisplayLetter(poolKey, targetKey) {
+  const a = gpcDisplayPhoneme(poolKey).toLowerCase();
+  const b = gpcDisplayPhoneme(targetKey).toLowerCase();
+  return a.length > 0 && a === b;
+}
+
+function filterCatchGpcPool(pool, target) {
+  const t = String(target ?? '').trim();
+  return uniqueValidTokens(pool, { caseSensitive: true }).filter(w => {
+    if (w === t) return false;
+    if (gpcSharesDisplayLetter(w, t)) return false;
+    return true;
+  });
+}
+
+function buildCatchChallengeOptions(target, distractorPool, targetPool, needCount = 5, masteryStats = null) {
+  return buildChallengeOptions(
+    target,
+    filterCatchGpcPool(distractorPool, target),
+    filterCatchGpcPool(targetPool, target),
+    needCount,
+    'gpc',
+    masteryStats
+  );
 }
 
 function renderHwContextBar(word) {
@@ -1309,6 +1833,10 @@ function afterGameRenderArmNext() {
 
 function correctFeedback(target, type, gameKind) {
   if (type === 'gpc') {
+    const label = gpcDisplayPhoneme(target);
+    if (gameKind === 'soundBox') {
+      return pickSoundBoxCorrectFeedback();
+    }
     if (gameKind === 'soundFlip') {
       return pickFeedbackMessage([
         'Yes! You found the match.',
@@ -1319,9 +1847,9 @@ function correctFeedback(target, type, gameKind) {
     const ex = lookupGpcExampleWord(target);
     const exBit = ex ? ` Like in “${ex}”.` : '';
     return pickFeedbackMessage([
-      `Yes! Say “${target}” again.${exBit}`,
-      `Right! Find a word with “${target}”.${exBit}`,
-      `Good! Say “${target}” three times.${exBit}`
+      `Yes! Say “${label}” again.${exBit}`,
+      `Right! Find a word with “${label}”.${exBit}`,
+      `Good! Say “${label}” three times.${exBit}`
     ]);
   }
   if (gameKind === 'hwBlank') {
@@ -1332,6 +1860,14 @@ function correctFeedback(target, type, gameKind) {
       `Nice! Try a new sentence with “${target}”.`
     ]);
   }
+  if (gameKind === 'hwJumble') {
+    return pickFeedbackMessage([
+      `Yes! You found the right spelling of “${target}”.`,
+      `Right! Say “${target}” again.`,
+      `Good! Picture how “${target}” is spelled.`,
+      `Nice! Write “${target}” in the air.`
+    ]);
+  }
   return pickFeedbackMessage([
     `Yes! Say “${target}” again.`,
     `Right! Write “${target}” in the air.`,
@@ -1340,7 +1876,7 @@ function correctFeedback(target, type, gameKind) {
   ]);
 }
 
-const CHALLENGE_RETRY_TYPES = new Set(['gpcMatch', 'hwHunt', 'soundFlip', 'hwBlank']);
+const CHALLENGE_RETRY_TYPES = new Set(['gpcMatch', 'hwHunt', 'soundFlip', 'hwBlank', 'hwJumble']);
 
 function isChallengeRetryGame(type) {
   return CHALLENGE_RETRY_TYPES.has(type);
@@ -1351,6 +1887,7 @@ function challengeNextOnclick(g) {
   if (g.feedback.correct) {
     if (g.type === 'soundFlip') return 'nextSoundFlipRound()';
     if (g.type === 'hwBlank') return 'nextBlankRound()';
+    if (g.type === 'hwJumble') return 'nextHwJumbleRound()';
     return 'nextRound()';
   }
   if (isChallengeRetryGame(g.type)) return 'retryChallengeRound()';
@@ -1393,22 +1930,25 @@ window.retryChallengeRound = () => {
   sfxClick();
   g.feedback = null;
   if (g.type === 'soundFlip') g.flipPhase = 'ready';
+  if (g.type === 'hwJumble') g.jumblePhase = 'ready';
   render();
   setTimeout(() => {
     if (state.view !== 'game' || state.game !== g || g.feedback) return;
     playTargetOnShow(g, g.currentTarget);
     if (g.type === 'soundFlip') startSoundFlipPrompt();
+    if (g.type === 'hwJumble') startHwJumblePrompt();
   }, 250);
 };
 
 function wrongFeedback(target, type, gameKind) {
   if (type === 'gpc') {
+    const label = gpcDisplayPhoneme(target);
     const ex = lookupGpcExampleWord(target);
     const exBit = ex ? ` Try “${ex}”.` : '';
     return pickFeedbackMessage([
-      `Listen again. Say “${target}”.${exBit}`,
-      `Not that one. Hear “${target}” again.${exBit}`,
-      `Try again. Say “${target}” out loud.${exBit}`
+      `Listen again. Say “${label}”.${exBit}`,
+      `Not that one. Hear “${label}” again.${exBit}`,
+      `Try again. Say “${label}” out loud.${exBit}`
     ]);
   }
   if (gameKind === 'hwBlank') {
@@ -1434,16 +1974,17 @@ function isValidGameToken(value) {
   const s = String(value ?? '').trim();
   if (!s) return false;
   if (s === '?' || s === '•') return false;
+  if (s.includes(GPC_AUDIO_SEP)) return isValidGameToken(gpcDisplayPhoneme(s));
   return true;
 }
 
-function uniqueValidTokens(values) {
+function uniqueValidTokens(values, { caseSensitive = false } = {}) {
   const out = [];
   const seen = new Set();
   for (const v of values) {
     const s = String(v ?? '').trim();
     if (!isValidGameToken(s)) continue;
-    const key = s.toLowerCase();
+    const key = caseSensitive ? s : s.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(s);
@@ -1452,20 +1993,71 @@ function uniqueValidTokens(values) {
 }
 
 /** Target + distractors for splat / word-challenge options; never includes blank placeholders. */
-function buildChallengeOptions(target, distractorPool, targetPool, needCount = 3, kind = 'hw') {
+function getCombinedMasteryStats(needs) {
+  const met = needs.masteredGpcs.length + needs.masteredHws.length;
+  const unmet = needs.targetGpcs.length + needs.targetHws.length;
+  return { met, total: met + unmet };
+}
+
+function hasGpcPracticePool(needs) {
+  return needs.targetGpcs.length > 0 || needs.masteredGpcs.length > 0;
+}
+
+function hasHwPracticePool(needs) {
+  return needs.targetHws.length > 0 || needs.masteredHws.length > 0;
+}
+
+function hasAnyPracticePool(needs) {
+  return hasGpcPracticePool(needs) || hasHwPracticePool(needs);
+}
+
+/** Share of challenge slots drawn from already-known sounds/words (combined met ÷ total). */
+function getMasteredAnswerShare(metCount, totalCount) {
+  if (totalCount <= 0) return 0;
+  const pct = metCount / totalCount;
+  if (pct >= 1) return 1;
+  if (pct >= 0.75) return 2 / 6;
+  if (pct >= 0.51) return 2 / 6;
+  return 1 / 6;
+}
+
+function countKnownChallengeSlots(totalSlots, metCount, totalCount) {
+  if (totalCount <= 0 || metCount <= 0) return 0;
+  if (metCount >= totalCount) return totalSlots;
+  return Math.min(totalSlots, Math.max(0, Math.round(totalSlots * getMasteredAnswerShare(metCount, totalCount))));
+}
+
+function buildChallengeOptions(target, distractorPool, targetPool, needCount = 3, kind = 'hw', masteryStats = null) {
   const t = String(target ?? '').trim();
   if (!isValidGameToken(t)) return [];
-  const tKey = t.toLowerCase();
-  let distractors = shuffle(
-    uniqueValidTokens(distractorPool).filter(w => w.toLowerCase() !== tKey)
-  ).slice(0, needCount);
+  const tokenOpts = kind === 'hw' ? { caseSensitive: true } : { caseSensitive: true };
+  const matchesTarget = (w) => String(w) === t;
+
+  const mastered = shuffle(
+    uniqueValidTokens(distractorPool, tokenOpts).filter(w => !matchesTarget(w))
+  );
+  const allPool = uniqueValidTokens(targetPool, tokenOpts).filter(w => !matchesTarget(w));
+  const masteredSet = new Set(mastered);
+  const unmet = allPool.filter(w => !masteredSet.has(w));
+
+  const totalSlots = needCount + 1;
+  const nKnownSlots = masteryStats ? countKnownChallengeSlots(totalSlots, masteryStats.met, masteryStats.total) : 0;
+  const nKnownDistractors = Math.min(needCount, nKnownSlots);
+
+  const distractors = [];
+  const masteredQueue = [...mastered];
+  const unmetQueue = shuffle([...unmet]);
+  while (distractors.length < nKnownDistractors && masteredQueue.length) {
+    distractors.push(masteredQueue.shift());
+  }
+  while (distractors.length < needCount && unmetQueue.length) {
+    const w = unmetQueue.shift();
+    if (!distractors.includes(w)) distractors.push(w);
+  }
   if (distractors.length < needCount) {
-    const extra = uniqueValidTokens(targetPool).filter(
-      w => w.toLowerCase() !== tKey && !distractors.includes(w)
-    );
-    for (const w of extra) {
+    for (const w of allPool) {
       if (distractors.length >= needCount) break;
-      distractors.push(w);
+      if (!distractors.includes(w)) distractors.push(w);
     }
   }
   const fallbacks = kind === 'gpc'
@@ -1473,47 +2065,79 @@ function buildChallengeOptions(target, distractorPool, targetPool, needCount = 3
     : ['the', 'and', 'is', 'was', 'to', 'a', 'he', 'she', 'we', 'you'];
   for (const f of fallbacks) {
     if (distractors.length >= needCount) break;
-    if (f.toLowerCase() !== tKey && !distractors.includes(f)) distractors.push(f);
+    if (!matchesTarget(f) && !distractors.includes(f)) distractors.push(f);
   }
   return shuffle([t, ...distractors.slice(0, needCount)]);
 }
 
+function isCarryOverIncluded(cls) {
+  const co = cls?.yearEndCarryOver;
+  return !!co && co.included !== false;
+}
+
+function getStudentCarryOverSets(cls, studentName) {
+  const entry = cls?.yearEndCarryOver?.students?.[studentName];
+  if (!entry) return { gpc: new Set(), hw: new Set() };
+  const gpcs = (entry.gpcs || []).map(g => String(g ?? '').trim()).filter(Boolean);
+  const hws = (entry.hws || []).map(w => String(w ?? '').trim()).filter(Boolean);
+  return { gpc: new Set(gpcs), hw: new Set(hws) };
+}
+
+function resolveStudentAssessment(cls, studentName) {
+  const cps = [...(cls.checkpoints || [])].sort((a, b) => {
+    const dateDiff = new Date(b.date) - new Date(a.date);
+    if (dateDiff !== 0) return dateDiff;
+    return (b.units?.length || 0) - (a.units?.length || 0);
+  });
+  for (const cp of cps) {
+    const assessment = cls.assessments?.checkpoints?.[cp.id]?.[studentName];
+    if (assessment) return { assessment, label: cp.label };
+  }
+  const baseline = cls.assessments?.baseline?.[studentName];
+  if (baseline) return { assessment: baseline, label: 'Baseline' };
+  return { assessment: null, label: 'Baseline' };
+}
+
+function appendNeedsFromUnit(result, unit, uIdx, aUnit, carrySets) {
+  const isCarryUnit = !!unit.carryOverUnit;
+  if (isCarryUnit && (!carrySets || (!carrySets.gpc.size && !carrySets.hw.size))) return;
+
+  const gpcMastered = (_, i) => aUnit && aUnit.gpcs && aUnit.gpcs[i] === 1;
+  const hwMastered = (hw, i) => aUnit && aUnit.hws && aUnit.hws[i] === 1;
+
+  (unit.gpcs || []).forEach((gpc, i) => {
+    const item = makeGpcItemFromUnitSlot(unit, uIdx, i);
+    if (!item) return;
+    if (isCarryUnit && !carrySets.gpc.has(item.gpc)) return;
+    if (gpcMastered(gpc, i)) result.masteredGpcs.push(item);
+    else result.targetGpcs.push(item);
+  });
+  unit.heartWords.forEach((hw, i) => {
+    const text = String(hw ?? '').trim();
+    if (!isValidGameToken(text)) return;
+    if (isCarryUnit && !carrySets.hw.has(text)) return;
+    const item = { hw: text, unitIdx: uIdx, unit: unit.name };
+    if (hwMastered(hw, i)) result.masteredHws.push(item);
+    else result.targetHws.push(item);
+  });
+}
+
 function getStudentNeeds(studentName) {
   const cls = state.data.classes[state.classKey];
-  const cps = cls.checkpoints || [];
-  const sorted = [...cps].sort((a,b) => new Date(b.date) - new Date(a.date));
-  const latest = sorted[0];
-  let assessment, coveredUnits, label;
-  if (latest && cls.assessments.checkpoints && cls.assessments.checkpoints[latest.id] && cls.assessments.checkpoints[latest.id][studentName]) {
-    assessment = cls.assessments.checkpoints[latest.id][studentName];
-    coveredUnits = latest.units;
-    label = latest.label;
-  } else {
-    assessment = cls.assessments.baseline[studentName];
-    coveredUnits = cls.units.map((_,i)=>i);
-    label = 'Baseline';
-  }
+  const { assessment, label } = resolveStudentAssessment(cls, studentName);
+  const coveredUnits = (cls.units || []).map((_, i) => i);
+  const carrySets = isCarryOverIncluded(cls) ? getStudentCarryOverSets(cls, studentName) : { gpc: new Set(), hw: new Set() };
   const result = { targetGpcs: [], targetHws: [], masteredGpcs: [], masteredHws: [], assessment, label, coveredUnits };
+  if (!assessment) return result;
+
   coveredUnits.forEach(uIdx => {
     const unit = cls.units[uIdx];
-    const aUnit = assessment.units[uIdx];
-    const gpcExamples = Array.isArray(unit.gpcExamples) ? unit.gpcExamples : [];
-    unit.gpcs.forEach((gpc, i) => {
-      const { sound, example } = parseGpcEntry(gpc, gpcExamples[i]);
-      if (!isValidGameToken(sound)) return;
-      const exampleWord = isValidGameToken(example) ? example : '';
-      const item = { gpc: sound, exampleWord, unitIdx: uIdx, unit: unit.name };
-      if (aUnit.gpcs[i] === 1) result.masteredGpcs.push(item);
-      else result.targetGpcs.push(item);
-    });
-    unit.heartWords.forEach((hw, i) => {
-      const text = String(hw ?? '').trim();
-      if (!isValidGameToken(text)) return;
-      const item = { hw: text, unitIdx: uIdx, unit: unit.name };
-      if (aUnit.hws[i] === 1) result.masteredHws.push(item);
-      else result.targetHws.push(item);
-    });
+    if (!unit) return;
+    if (unit.carryOverUnit && !isCarryOverIncluded(cls)) return;
+    const aUnit = assessment.units?.[uIdx];
+    appendNeedsFromUnit(result, unit, uIdx, aUnit, unit.carryOverUnit ? carrySets : null);
   });
+
   const seenHw = new Set();
   result.targetHws = result.targetHws.filter(x => {
     const key = x.hw.toLowerCase();
@@ -1534,24 +2158,33 @@ function getStudentNeeds(studentName) {
 function getFocusItems(name) {
   const needs = getStudentNeeds(name);
   let items = [
-    ...needs.targetGpcs.map(x => ({ type: 'gpc', value: x.gpc })),
+    ...needs.targetGpcs.map(x => ({ type: 'gpc', value: gpcPoolKey(x), item: x })),
     ...needs.targetHws.map(x => ({ type: 'hw', value: x.hw })),
   ].filter(x => isValidGameToken(x.value));
   if (items.length === 0) {
     items = [
-      ...needs.masteredGpcs.map(x => ({ type: 'gpc', value: x.gpc })),
+      ...needs.masteredGpcs.map(x => ({ type: 'gpc', value: gpcPoolKey(x), item: x })),
       ...needs.masteredHws.map(x => ({ type: 'hw', value: x.hw })),
     ].filter(x => isValidGameToken(x.value));
   }
-  if (items.length === 0) items = [{ type: 'gpc', value: 'a' }];
+  if (items.length === 0) {
+    const catalog = state.classKey ? collectClassGpcItems(state.data.classes[state.classKey]) : [];
+    if (catalog.length) {
+      const first = catalog[0];
+      items = [{ type: 'gpc', value: gpcPoolKey(first), item: first }];
+    }
+  }
   return items;
 }
 
-/** Unmet/met round mix: 75/25 (normal), 100/0 (no met), 66/33 (<10 unmet + met). */
+/** Round mix from combined mastery %: 1/6, 1/6, 2/6, 2/6, or all known. */
 function getFocusRoundWeights(unmetCount, metCount) {
-  if (metCount === 0 || unmetCount === 0) return { unmet: 1, met: 0 };
-  if (unmetCount < 10) return { unmet: 0.66, met: 0.33 };
-  return { unmet: 0.75, met: 0.25 };
+  const total = unmetCount + metCount;
+  if (total === 0) return { unmet: 1, met: 0 };
+  if (unmetCount === 0) return { unmet: 0, met: 1 };
+  if (metCount === 0) return { unmet: 1, met: 0 };
+  const metShare = getMasteredAnswerShare(metCount, total);
+  return { unmet: 1 - metShare, met: metShare };
 }
 
 /** Shuffle-deck: exhaust every item once before any repeat (reshuffle between cycles). */
@@ -1575,8 +2208,8 @@ function createCycleDeck(items) {
   return { next, reset: reshuffle };
 }
 
-function focusPoolSignature(items) {
-  return uniqueValidTokens(items).slice().sort((a, b) => a.localeCompare(b)).join('\x1e');
+function focusPoolSignature(items, caseSensitive = false) {
+  return uniqueValidTokens(items, { caseSensitive }).slice().sort((a, b) => a.localeCompare(b)).join('\x1e');
 }
 
 /**
@@ -1588,9 +2221,10 @@ function focusPoolSignature(items) {
  * @param {string[]} items - tokens or item keys
  */
 function getStudentCycleDeck(student, kind, slot, items) {
-  const pool = uniqueValidTokens(items);
+  const caseSensitive = kind === 'hw';
+  const pool = uniqueValidTokens(items, { caseSensitive });
   if (!student || pool.length === 0) return createCycleDeck(pool);
-  const sig = focusPoolSignature(pool);
+  const sig = focusPoolSignature(pool, caseSensitive);
   const key = `${state.classKey}|${student}|${kind}|${slot}`;
   const store = state.focusCycleDecks;
   const entry = store[key];
@@ -1606,16 +2240,18 @@ function getStudentCycleDeck(student, kind, slot, items) {
  * @param {string[]} metPool - mastered items (review); ignored when empty
  * @param {number} count - rounds (default 6)
  */
-function buildRoundTargetsFromPools(unmetPool, metPool, count = CHALLENGE_ROUNDS, kind = 'gpc') {
-  const unmet = uniqueValidTokens(unmetPool);
-  const met = uniqueValidTokens(metPool);
+function buildRoundTargetsFromPools(unmetPool, metPool, count = CHALLENGE_ROUNDS, kind = 'gpc', masteryStats = null) {
+  const tokenOpts = { caseSensitive: true };
+  const unmet = uniqueValidTokens(unmetPool, tokenOpts);
+  const met = uniqueValidTokens(metPool, tokenOpts);
   const practicePool = unmet.length > 0 ? unmet : met;
   if (practicePool.length === 0) return [];
 
-  const weights = getFocusRoundWeights(unmet.length, met.length);
   let nMet = 0;
   if (met.length > 0 && unmet.length > 0) {
-    nMet = Math.min(count, Math.max(0, Math.round(count * weights.met)));
+    const stats = masteryStats || { met: met.length, total: unmet.length + met.length };
+    const metShare = getMasteredAnswerShare(stats.met, stats.total);
+    nMet = Math.min(count, Math.max(0, Math.round(count * metShare)));
   }
   const nUnmet = count - nMet;
 
@@ -1634,32 +2270,90 @@ function buildRoundTargetsFromPools(unmetPool, metPool, count = CHALLENGE_ROUNDS
 
 function buildRoundTargets(needs, kind, count = CHALLENGE_ROUNDS) {
   const unmet = kind === 'gpc'
-    ? needs.targetGpcs.map(x => x.gpc)
+    ? needs.targetGpcs.map(gpcPoolKey)
     : needs.targetHws.map(x => x.hw);
   const met = kind === 'gpc'
-    ? needs.masteredGpcs.map(x => x.gpc)
+    ? needs.masteredGpcs.map(gpcPoolKey)
     : needs.masteredHws.map(x => x.hw);
-  return buildRoundTargetsFromPools(unmet, met, count, kind);
+  return buildRoundTargetsFromPools(unmet, met, count, kind, getCombinedMasteryStats(needs));
+}
+
+function arcadeItemLabel(item) {
+  if (!item) return '';
+  if (item.type === 'gpc') {
+    return String(item.item?.gpc || gpcDisplayPhoneme(item.value) || '').trim();
+  }
+  return String(item.value ?? '').trim();
+}
+
+function arcadeSpeakFocusItem(item) {
+  if (!item?.value) return;
+  if (item.type === 'gpc') {
+    const ph = item.item?.gpc || gpcDisplayPhoneme(item.value);
+    const ex = item.item?.exampleWord || parseGpcStorageKey(item.value).exampleWord || '';
+    if (ex) {
+      const audio = getGpcAudioSource(ph, ex);
+      if (audio) {
+        try {
+          const a = new Audio(audio);
+          a.play().catch(() => {});
+          return;
+        } catch (e) {}
+      }
+    }
+    speak(ph, 'gpc');
+    return;
+  }
+  speak(item.value, 'hw');
+}
+
+function enrichArcadeFocusItems(items) {
+  return (items || []).map(item => ({
+    type: item.type,
+    value: item.value,
+    label: arcadeItemLabel(item),
+    exampleWord: item.item?.exampleWord || parseGpcStorageKey(item.value).exampleWord || '',
+    item: item.item || null,
+  }));
+}
+
+function getFlashRandomPool(needs, kind) {
+  const seen = new Set();
+  const out = [];
+  const push = (card) => {
+    const key = `${card.type}:${String(card.value).toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(card);
+  };
+  getFlashPoolForKind(needs, kind).forEach(push);
+  if (kind === 'gpc') {
+    needs.masteredGpcs.forEach(x => push({ type: 'gpc', value: gpcPoolKey(x), item: x }));
+  } else {
+    needs.masteredHws.forEach(x => push({ type: 'hw', value: x.hw }));
+  }
+  return out.filter(c => isValidGameToken(kind === 'gpc' ? c.item?.gpc : c.value));
 }
 
 function assignFocusItems(count) {
   const needs = getStudentNeeds(state.selectedStudent);
   const unmet = [
-    ...needs.targetGpcs.map(x => ({ type: 'gpc', value: x.gpc })),
+    ...needs.targetGpcs.map(x => ({ type: 'gpc', value: gpcPoolKey(x), item: x })),
     ...needs.targetHws.map(x => ({ type: 'hw', value: x.hw })),
   ].filter(x => isValidGameToken(x.value));
   const met = [
-    ...needs.masteredGpcs.map(x => ({ type: 'gpc', value: x.gpc })),
+    ...needs.masteredGpcs.map(x => ({ type: 'gpc', value: gpcPoolKey(x), item: x })),
     ...needs.masteredHws.map(x => ({ type: 'hw', value: x.hw })),
   ].filter(x => isValidGameToken(x.value));
   const key = item => `${item.type}:${item.value}`;
   const practice = unmet.length > 0 ? unmet : met;
   if (practice.length === 0) return [{ type: 'gpc', value: 'a' }];
 
-  const weights = getFocusRoundWeights(unmet.length, met.length);
+  const combined = getCombinedMasteryStats(needs);
   let nMet = 0;
   if (met.length > 0 && unmet.length > 0) {
-    nMet = Math.min(count, Math.max(0, Math.round(count * weights.met)));
+    const metShare = getMasteredAnswerShare(combined.met, combined.total);
+    nMet = Math.min(count, Math.max(0, Math.round(count * metShare)));
   }
   const nUnmet = count - nMet;
 
@@ -1680,9 +2374,11 @@ function assignFocusItems(count) {
 
 function getFlashPoolForKind(needs, kind) {
   if (kind === 'gpc') {
-    return needs.targetGpcs.map(x => ({ type: 'gpc', value: x.gpc })).filter(c => isValidGameToken(c.value));
+    const source = needs.targetGpcs.length > 0 ? needs.targetGpcs : needs.masteredGpcs;
+    return source.map(x => ({ type: 'gpc', value: gpcPoolKey(x), item: x })).filter(c => isValidGameToken(c.item?.gpc));
   }
-  return needs.targetHws.map(x => ({ type: 'hw', value: x.hw })).filter(c => isValidGameToken(c.value));
+  const source = needs.targetHws.length > 0 ? needs.targetHws : needs.masteredHws;
+  return source.map(x => ({ type: 'hw', value: x.hw })).filter(c => isValidGameToken(c.value));
 }
 
 function hasFlashBeenChecked(value) {
@@ -1757,6 +2453,10 @@ function getFlashSetCardStatus(name, kind, setIndex, items) {
   return 'flash-set-card--attempted';
 }
 
+function areAllFlashSetsComplete(name, kind, sets) {
+  return sets.length > 0 && sets.every(items => isFlashSetAllGot(items));
+}
+
 function gamePlayedKey(name) { return `ragameplayed_${state.classKey}_${name}`; }
 
 function loadGamePlayed() {
@@ -1807,6 +2507,8 @@ function getBoardState(name) {
       twoPlayerMode: false, activePlayer: 1,
       playedGames: [], manualMode: false,
       lastDiceRoll: null,
+      passesUsed: 0,
+      awaitingTurnComplete: false,
     };
   }
   const bd = state.boardGame[name];
@@ -1814,6 +2516,9 @@ function getBoardState(name) {
   if (!bd.activePlayer) bd.activePlayer = 1;
   if (bd.twoPlayerMode == null) bd.twoPlayerMode = false;
   if (!Array.isArray(bd.playedGames)) bd.playedGames = [];
+  if (typeof bd.passesUsed !== 'number') bd.passesUsed = 0;
+  if (bd.awaitingTurnComplete == null) bd.awaitingTurnComplete = false;
+  ensureBoardTileShuffle(bd);
   if (bd.position > BOARD_FINISH_INDEX) bd.position = 0;
   if (bd.position2 > BOARD_FINISH_INDEX) bd.position2 = 0;
   return bd;
@@ -1824,22 +2529,113 @@ function saveBoardState(name, bd) {
   try { localStorage.setItem(boardGameKey(name), JSON.stringify(bd)); } catch (e) {}
 }
 
+function consumeBoardPass(name, isTagMe) {
+  if (isTagMe) {
+    const td = getTagMeState(name);
+    if (td.passesUsed < BOARD_MAX_PASSES) {
+      td.passesUsed += 1;
+      saveTagMeState(name, td);
+      if (state.view === 'tagme') render();
+    }
+    return;
+  }
+  const bd = getBoardState(name);
+  if (bd.passesUsed < BOARD_MAX_PASSES) {
+    bd.passesUsed += 1;
+    saveBoardState(name, bd);
+  }
+}
+
+function resetBoardPasses(name, isTagMe) {
+  if (isTagMe) {
+    const td = getTagMeState(name);
+    td.passesUsed = 0;
+    saveTagMeState(name, td);
+    return;
+  }
+  const bd = getBoardState(name);
+  bd.passesUsed = 0;
+  saveBoardState(name, bd);
+}
+
+function boardPassesExhausted(name, isTagMe) {
+  const used = isTagMe ? getTagMeState(name).passesUsed : getBoardState(name).passesUsed;
+  return used >= BOARD_MAX_PASSES;
+}
+
 function isBoardBonusSquare(index) {
   return index > 0 && index < BOARD_FINISH_INDEX && index % 9 === 4;
 }
 
-function getBoardBonusArcadeId(index) {
-  if (!isBoardBonusSquare(index)) return null;
-  return BOARD_BONUS_GAMES[Math.floor((index - 1) / 9) % BOARD_BONUS_GAMES.length];
+function countBoardRegularTileSlots() {
+  let count = 0;
+  for (let i = 1; i < BOARD_FINISH_INDEX; i++) {
+    if (!isBoardBonusSquare(i)) count++;
+  }
+  return count;
 }
 
-function getBoardSpaceGameId(index) {
+function countBoardBonusTileSlots() {
+  let count = 0;
+  for (let i = 1; i < BOARD_FINISH_INDEX; i++) {
+    if (isBoardBonusSquare(i)) count++;
+  }
+  return count;
+}
+
+function buildExpandedShufflePool(basePool, slotCount) {
+  const pool = [];
+  while (pool.length < slotCount) pool.push(...shuffle([...basePool]));
+  return pool.slice(0, slotCount);
+}
+
+function generateBoardTileShuffle() {
+  const regularSlots = countBoardRegularTileSlots();
+  const bonusSlots = countBoardBonusTileSlots();
+  return {
+    shuffledGames: buildExpandedShufflePool(BOARD_GAME_SEQUENCE, regularSlots),
+    shuffledBonuses: buildExpandedShufflePool(BOARD_BONUS_GAMES, bonusSlots),
+  };
+}
+
+function ensureBoardTileShuffle(boardState) {
+  if (!Array.isArray(boardState.shuffledGames) || boardState.shuffledGames.length === 0) {
+    const layout = generateBoardTileShuffle();
+    boardState.shuffledGames = layout.shuffledGames;
+    boardState.shuffledBonuses = layout.shuffledBonuses;
+  }
+  return boardState;
+}
+
+function resetBoardTileShuffle(boardState) {
+  const layout = generateBoardTileShuffle();
+  boardState.shuffledGames = layout.shuffledGames;
+  boardState.shuffledBonuses = layout.shuffledBonuses;
+  return boardState;
+}
+
+function getBoardBonusArcadeId(index, boardState) {
+  if (!isBoardBonusSquare(index)) return null;
+  if (!boardState) {
+    return BOARD_BONUS_GAMES[Math.floor((index - 1) / 9) % BOARD_BONUS_GAMES.length];
+  }
+  ensureBoardTileShuffle(boardState);
+  let bonusSlot = 0;
+  for (let i = 1; i < index; i++) {
+    if (isBoardBonusSquare(i)) bonusSlot++;
+  }
+  return boardState.shuffledBonuses[bonusSlot % boardState.shuffledBonuses.length];
+}
+
+function getBoardSpaceGameId(index, boardState) {
   if (index === 0 || index >= BOARD_FINISH_INDEX || isBoardBonusSquare(index)) return null;
   let slot = 0;
   for (let i = 1; i < index; i++) {
     if (!isBoardBonusSquare(i)) slot++;
   }
-  return BOARD_GAME_SEQUENCE[slot % BOARD_GAME_SEQUENCE.length];
+  if (!boardState) return BOARD_GAME_SEQUENCE[slot % BOARD_GAME_SEQUENCE.length];
+  ensureBoardTileShuffle(boardState);
+  return boardState.shuffledGames[slot % boardState.shuffledGames.length];
 }
 
 function getBoardSquareLabel(index) {
@@ -1848,20 +2644,25 @@ function getBoardSquareLabel(index) {
   return { text: String(index + 1), word: false };
 }
 
-function computeBoardLayout(count = BOARD_SPACE_COUNT) {
-  const cols = BOARD_COLS;
+function computeBoardLayout(count = BOARD_SPACE_COUNT, cols = BOARD_COLS, opts = {}) {
+  const rowGapRatio = opts.rowGapRatio ?? 0.5;
+  const tileScale = opts.tileScale ?? 1;
+  const boundsPadding = opts.padding ?? 1.5;
   const rows = Math.ceil(count / cols);
   const marginX = 1;
   const marginY = 1;
   const usableW = 100 - marginX * 2;
-  const rowGapRatio = 0.5;
   const heightUnits = rows + (rows - 1) * rowGapRatio;
   const sW = usableW / cols;
   const sH = (100 - marginY * 2) / heightUnits;
   const s = Math.min(sW, sH);
   const gap = s * rowGapRatio;
   const rowStep = s + gap;
-  const connSize = s * 0.5;
+  const connW = s * tileScale * (opts.bridgeWidthScale ?? 0.55);
+  const connH = opts.bridgeOverlap != null
+    ? gap + s * opts.bridgeOverlap
+    : s * tileScale * (opts.bridgeHeightScale ?? 0.55);
+  const tile = s * tileScale;
   const boardWidth = cols * s;
   const offsetX = marginX + (usableW - boardWidth) / 2;
   const positions = [];
@@ -1875,8 +2676,8 @@ function computeBoardLayout(count = BOARD_SPACE_COUNT) {
       positions.push({
         x: offsetX + (col + 0.5) * s,
         y,
-        w: s,
-        h: s,
+        w: tile,
+        h: tile,
         row: r,
         col,
       });
@@ -1894,20 +2695,98 @@ function computeBoardLayout(count = BOARD_SPACE_COUNT) {
     connectors.push({
       x: endPos.x,
       y: (endPos.y + nextPos.y) / 2,
-      w: connSize,
-      h: connSize,
+      w: connW,
+      h: connH,
     });
   }
 
-  return { positions, connectors, s, gap };
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  positions.forEach(p => {
+    const hw = p.w / 2;
+    const hh = p.h / 2;
+    minX = Math.min(minX, p.x - hw);
+    maxX = Math.max(maxX, p.x + hw);
+    minY = Math.min(minY, p.y - hh);
+    maxY = Math.max(maxY, p.y + hh);
+  });
+  minX -= boundsPadding;
+  maxX += boundsPadding;
+  minY -= boundsPadding;
+  maxY += boundsPadding;
+  const bounds = {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX,
+    height: maxY - minY,
+    aspect: (maxX - minX) / (maxY - minY),
+  };
+
+  return { positions, connectors, s, gap, bounds, cols };
+}
+
+function normalizeBoardLayoutCoords(layout) {
+  const { bounds } = layout;
+  if (!bounds || bounds.width <= 0 || bounds.height <= 0) return layout;
+  const mapX = v => ((v - bounds.minX) / bounds.width) * 100;
+  const mapY = v => ((v - bounds.minY) / bounds.height) * 100;
+  const mapW = v => (v / bounds.width) * 100;
+  const mapH = v => (v / bounds.height) * 100;
+  return {
+    ...layout,
+    positions: layout.positions.map(p => ({
+      ...p,
+      x: mapX(p.x),
+      y: mapY(p.y),
+      w: mapW(p.w),
+      h: mapH(p.h),
+    })),
+    connectors: layout.connectors.map(c => ({
+      ...c,
+      x: mapX(c.x),
+      y: mapY(c.y),
+      w: mapW(c.w),
+      h: mapH(c.h),
+    })),
+    bounds: { ...bounds, aspect: bounds.width / bounds.height },
+  };
+}
+
+const TAG_ME_LAYOUT_OPTS = { rowGapRatio: 0.95, tileScale: 0.78, padding: 2.8 };
+
+function computeTagMeBoardLayout() {
+  const cols = getTagMeBoardCols();
+  const raw = computeBoardLayout(BOARD_SPACE_COUNT, cols, TAG_ME_LAYOUT_OPTS);
+  const layout = normalizeBoardLayoutCoords(raw);
+  layout.cols = cols;
+  state.tagMeBoardLayout = layout;
+  return layout;
+}
+
+function getTagMeBoardLayout() {
+  const cols = getTagMeBoardCols();
+  if (state.tagMeBoardLayout?.cols === cols) return state.tagMeBoardLayout;
+  return computeTagMeBoardLayout();
+}
+
+function buildTagMeSnakePath(positions) {
+  if (!positions.length) return '';
+  let d = `M ${positions[0].x} ${positions[0].y}`;
+  for (let i = 1; i < positions.length; i++) {
+    d += ` L ${positions[i].x} ${positions[i].y}`;
+  }
+  return d;
 }
 
 function getBoardSpacePositions(count = BOARD_SPACE_COUNT) {
   return computeBoardLayout(count).positions;
 }
 
-function buildBoardPathRows(positions) {
-  const cols = BOARD_COLS;
+function buildBoardPathRows(positions, cols = BOARD_COLS) {
   const rows = Math.ceil(positions.length / cols);
   const parts = [];
   for (let r = 0; r < rows; r++) {
@@ -1935,9 +2814,9 @@ function getBoardGameTrack(gameId) {
 
 function isBoardGameAvailable(name, gameId) {
   const needs = getStudentNeeds(name);
-  if (gameId === 'flash') return needs.targetGpcs.length > 0 || needs.targetHws.length > 0;
-  if (getBoardGameTrack(gameId) === 'gpc') return needs.targetGpcs.length > 0;
-  return needs.targetHws.length > 0;
+  if (gameId === 'flash') return hasAnyPracticePool(needs);
+  if (getBoardGameTrack(gameId) === 'gpc') return hasGpcPracticePool(needs);
+  return hasHwPracticePool(needs);
 }
 
 function markBoardGamePlayed(name, gameId) {
@@ -2028,20 +2907,66 @@ function hasPlayedTrackGame(name, gameId) {
   return !!getGamePlayedMap(name)[gameId];
 }
 
-function markTrackGamePlayed(name, gameId) {
-  if (!TRACK_GAME_IDS.includes(gameId)) return false;
+function getApplicableTrackGameIds(name) {
+  const needs = getStudentNeeds(name);
+  const ids = [];
+  if (hasGpcPracticePool(needs)) ids.push(...GPC_TRACK_GAME_IDS);
+  if (hasHwPracticePool(needs)) ids.push(...HW_TRACK_GAME_IDS);
+  return ids;
+}
+
+function completeReadingTrackCycleIfReady(name) {
   const played = getGamePlayedMap(name);
-  if (played[gameId]) return false;
-  played[gameId] = true;
-  const allDone = TRACK_GAME_IDS.every(id => played[id]);
-  if (allDone) {
-    TRACK_GAME_IDS.forEach(id => { delete played[id]; });
-    saveGamePlayedMap(name, played);
-    addPoints(name, STARCADE_TRACK_BONUS);
-    return true;
-  }
+  const applicable = getApplicableTrackGameIds(name);
+  if (applicable.length === 0) return false;
+  if (!applicable.every(id => played[id])) return false;
+  applicable.forEach(id => { delete played[id]; });
   saveGamePlayedMap(name, played);
-  return false;
+  addPoints(name, READING_TRACK_BONUS);
+  return true;
+}
+
+function markTrackGamePlayed(name, gameId) {
+  if (!READING_TRACK_GAME_IDS.includes(gameId)) return false;
+  const applicable = getApplicableTrackGameIds(name);
+  if (!applicable.includes(gameId)) return false;
+  const played = getGamePlayedMap(name);
+  if (!played[gameId]) {
+    played[gameId] = true;
+    saveGamePlayedMap(name, played);
+  }
+  return completeReadingTrackCycleIfReady(name);
+}
+
+function removeReadingTrackBonusOverlay() {
+  document.getElementById('readingTrackBonusOverlay')?.remove();
+}
+
+function showReadingTrackBonusPopup() {
+  if (!state.readingTrackBonusPopup) return;
+  removeReadingTrackBonusOverlay();
+  const overlay = document.createElement('div');
+  overlay.id = 'readingTrackBonusOverlay';
+  overlay.className = 'quit-confirm-overlay fadeIn';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'All games complete');
+  overlay.innerHTML = `
+    <div class="quit-confirm-panel reading-track-bonus-panel text-center">
+      <div class="text-4xl mb-3" aria-hidden="true">🌟</div>
+      <h2 class="text-xl font-bold mb-2 arcade-title-friendly">All games complete!</h2>
+      <p class="text-white/90 mb-1 arcade-instructions">You earned <strong>+${READING_TRACK_BONUS} bonus stars</strong>.</p>
+      <p class="text-white/75 text-sm mb-5 arcade-instructions">All games are ready to play again.</p>
+      <button type="button" id="readingTrackBonusOk" class="w-full py-2.5 rounded-xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 text-purple-950">OK</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  confetti();
+  overlay.querySelector('#readingTrackBonusOk').addEventListener('click', () => {
+    sfxClick();
+    state.readingTrackBonusPopup = false;
+    removeReadingTrackBonusOverlay();
+    if (state.view === 'profileReadingGames') render();
+  });
 }
 
 // ============================================================
@@ -2055,6 +2980,28 @@ function removeQuitConfirmOverlay() {
   if (el) el.remove();
   state.quitConfirmPending = false;
   state._quitConfirmHandler = null;
+}
+
+function showTakeYourTimePopup() {
+  return new Promise(resolve => {
+    document.getElementById('takeYourTimeOverlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'takeYourTimeOverlay';
+    overlay.className = 'quit-confirm-overlay fadeIn';
+    overlay.innerHTML = `
+      <div class="quit-confirm-panel text-center">
+        <div class="text-4xl mb-3">🌱</div>
+        <h2 class="text-xl font-bold mb-2 arcade-title-friendly">Take your time.</h2>
+        <p class="text-white/85 mb-5 arcade-instructions">Practice makes progress!</p>
+        <button type="button" id="takeYourTimeOk" class="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 px-6 py-2.5 rounded-xl font-semibold">OK</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#takeYourTimeOk').addEventListener('click', () => {
+      sfxClick();
+      overlay.remove();
+      resolve();
+    });
+  });
 }
 
 window.requestQuitGame = (onConfirm) => {
@@ -2096,20 +3043,197 @@ window.requestQuitGame = (onConfirm) => {
 };
 
 window.quitToProfile = () => {
-  requestQuitGame(() => {
-    if (state.game) {
-      if (state.game.type === 'soundFlip') cleanupSoundFlip();
-      if (state.game.type === 'soundBox') cleanupSoundBox();
-      if (state.game._timer) {
-        clearTimeout(state.game._timer);
-        state.game._timer = null;
-      }
-      clearGameNextBtnTimer(state.game);
-    }
-    state.view = state.game?.fromBoard ? 'adventure' : 'profile';
-    state.boardRolling = false;
+  const g = state.game;
+  const fromTagMe = !!g?.fromTagMe;
+  const fromBoard = !!g?.fromBoard && !fromTagMe;
+  const name = state.selectedStudent;
+  if (g && !g.finished && name && (fromTagMe || fromBoard) && !g.boardManual) {
+    showBoardPassQuitPrompt({
+      isTagMe: fromTagMe,
+      onYes: () => abandonBoardActivityAndEndTurn(name, fromTagMe),
+    });
+    return;
+  }
+  requestQuitGame(() => performQuitToProfile());
+};
+
+function cleanupActiveReadingGame() {
+  const g = state.game;
+  if (!g) return;
+  if (g.type === 'soundFlip') cleanupSoundFlip();
+  if (g.type === 'hwJumble') cleanupHwJumble();
+  if (g.type === 'soundBox') cleanupSoundBox();
+  if (g._timer) {
+    clearTimeout(g._timer);
+    g._timer = null;
+  }
+  clearGameNextBtnTimer(g);
+  state.game = null;
+}
+
+function abandonBoardActivityAndEndTurn(name, isTagMe) {
+  cleanupActiveReadingGame();
+  consumeBoardPass(name, isTagMe);
+  state.boardRolling = false;
+  if (isTagMe) {
+    const td = getTagMeState(name);
+    td.awaitingTurnComplete = false;
+    saveTagMeState(name, td);
+    state.view = 'tagme';
     render();
+    void completeTagMeUserTurn(name, td);
+    return;
+  }
+  const bd = getBoardState(name);
+  bd.awaitingTurnComplete = false;
+  saveBoardState(name, bd);
+  state.view = 'adventure';
+  render();
+}
+
+function teardownArcadeBoardSession() {
+  teardownArcadeCanvasShell();
+  if (window._pongParentPointer) {
+    window.removeEventListener('mousemove', window._pongParentPointer);
+    window.removeEventListener('pointermove', window._pongParentPointer);
+    window._pongParentPointer = null;
+  }
+  if (window._pongWinHandler) {
+    window.removeEventListener('message', window._pongWinHandler);
+    window._pongWinHandler = null;
+  }
+  if (window._treasureHandler) {
+    window.removeEventListener('message', window._treasureHandler);
+    window._treasureHandler = null;
+  }
+  if (window._brickBreakerHandler) {
+    window.removeEventListener('message', window._brickBreakerHandler);
+    window._brickBreakerHandler = null;
+  }
+  if (window._brickBreakerParentPointer) {
+    window.removeEventListener('mousemove', window._brickBreakerParentPointer);
+    window.removeEventListener('pointermove', window._brickBreakerParentPointer);
+    window._brickBreakerParentPointer = null;
+  }
+  if (window._snakeHandler) {
+    window.removeEventListener('message', window._snakeHandler);
+    window._snakeHandler = null;
+  }
+}
+
+function abandonBoardArcadeAndEndTurn(name, isTagMe) {
+  teardownArcadeBoardSession();
+  state.arcade = null;
+  state.arcadeGame = null;
+  state.arcadeFromBoard = false;
+  state._boardArcadeReturnPending = false;
+  consumeBoardPass(name, isTagMe);
+  state.boardRolling = false;
+  if (isTagMe) {
+    const td = getTagMeState(name);
+    td.awaitingTurnComplete = false;
+    saveTagMeState(name, td);
+    state.view = 'tagme';
+    render();
+    void completeTagMeUserTurn(name, td);
+    return;
+  }
+  const bd = getBoardState(name);
+  bd.awaitingTurnComplete = false;
+  saveBoardState(name, bd);
+  state.view = 'adventure';
+  render();
+}
+
+function performQuitToProfile() {
+  const fromTagMe = !!state.game?.fromTagMe;
+  const fromBoard = !!state.game?.fromBoard;
+  const name = state.selectedStudent;
+  const shouldResumeTagMe = fromTagMe && name && getTagMeState(name).awaitingTurnComplete;
+  const shouldResumeAdventure = fromBoard && !fromTagMe && name && getBoardState(name).awaitingTurnComplete;
+  if (state.game) {
+    if (state.game.type === 'soundFlip') cleanupSoundFlip();
+    if (state.game.type === 'hwJumble') cleanupHwJumble();
+    if (state.game.type === 'soundBox') cleanupSoundBox();
+    if (state.game._timer) {
+      clearTimeout(state.game._timer);
+      state.game._timer = null;
+    }
+    clearGameNextBtnTimer(state.game);
+  }
+  const finishedGame = state.game;
+  state.game = null;
+  state.view = resolveProfileGameReturnView(finishedGame);
+  state.boardRolling = false;
+  render();
+  if (shouldResumeTagMe) {
+    void resumeTagMeAfterActivity();
+  } else if (shouldResumeAdventure) {
+    resumeAdventureAfterActivity();
+  }
+}
+
+function showBoardPassQuitPrompt({ isTagMe, onYes }) {
+  sfxClick();
+  removeBoardPassQuitOverlay();
+  const passState = isTagMe ? getTagMeState(state.selectedStudent) : getBoardState(state.selectedStudent);
+  const remaining = Math.max(0, BOARD_MAX_PASSES - (passState?.passesUsed || 0));
+  const overlay = document.createElement('div');
+  overlay.id = 'boardPassQuitOverlay';
+  overlay.className = 'tagme-pass-quit-overlay fadeIn';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.innerHTML = `
+    <div class="tagme-pass-quit-panel text-center">
+      <div class="tagme-pass-quit-ticket" aria-hidden="true">
+        <span class="tagme-pass-ticket-notch tagme-pass-ticket-notch--left"></span>
+        <span class="tagme-pass-ticket-body">PASS</span>
+        <span class="tagme-pass-ticket-notch tagme-pass-ticket-notch--right"></span>
+      </div>
+      <p class="text-xl font-bold mb-1 arcade-title-friendly">Spend 1 pass?</p>
+      <p class="text-sm text-white/75 mb-5">You have <strong>${remaining}</strong> pass${remaining === 1 ? '' : 'es'} left.</p>
+      <div class="flex gap-3 justify-center flex-wrap">
+        <button type="button" id="boardPassQuitNo" class="bg-white/15 hover:bg-white/25 px-5 py-2.5 rounded-xl font-semibold">No — keep playing</button>
+        <button type="button" id="boardPassQuitYes" class="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 px-5 py-2.5 rounded-xl font-semibold text-slate-900">Yes — spend 1 pass</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#boardPassQuitYes').addEventListener('click', () => {
+    sfxClick();
+    removeBoardPassQuitOverlay();
+    if (typeof onYes === 'function') onYes();
   });
+  overlay.querySelector('#boardPassQuitNo').addEventListener('click', () => {
+    sfxClick();
+    removeBoardPassQuitOverlay();
+  });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      sfxClick();
+      removeBoardPassQuitOverlay();
+    }
+  });
+}
+
+function removeBoardPassQuitOverlay() {
+  document.getElementById('boardPassQuitOverlay')?.remove();
+  document.getElementById('tagMePassQuitOverlay')?.remove();
+}
+
+window.resumeAdventureAfterActivity = () => {
+  const name = state.selectedStudent;
+  const bd = getBoardState(name);
+  bd.awaitingTurnComplete = false;
+  saveBoardState(name, bd);
+  state.view = 'adventure';
+  state.boardRolling = false;
+  render();
+};
+
+window.backToStudentMenu = () => {
+  sfxClick();
+  state.view = 'profile';
+  render();
 };
 
 window.backToProfileFromAdventure = () => {
@@ -2122,8 +3246,38 @@ window.backToProfileFromAdventure = () => {
 
 window.openAdventureMode = () => {
   sfxClick();
+  state.boardReturnView = 'adventure';
   state.view = 'adventure';
   render();
+};
+
+window.openTagMeMode = () => {
+  sfxClick();
+  state.boardReturnView = 'tagme';
+  state.view = 'tagme';
+  render();
+};
+
+window.openSoundsWordsPage = () => {
+  sfxClick();
+  state.view = 'profileSoundsWords';
+  render();
+};
+
+window.openReadingGamesPage = () => {
+  sfxClick();
+  state.view = 'profileReadingGames';
+  render();
+};
+
+window.openWallOfFamePage = () => {
+  sfxClick();
+  state.view = 'profileWallOfFame';
+  render();
+};
+
+window.openSelfCheckFromMenu = () => {
+  startGame('flash');
 };
 
 function render(){
@@ -2136,7 +3290,11 @@ function render(){
     case 'studentAuth': return renderStudentAuth(app);
     case 'passwords': return renderPasswords(app);
     case 'profile': return renderProfile(app);
+    case 'profileSoundsWords': return renderProfileSoundsWords(app);
+    case 'profileReadingGames': return renderProfileReadingGames(app);
+    case 'profileWallOfFame': return renderProfileWallOfFame(app);
     case 'adventure': return renderAdventureMode(app);
+    case 'tagme': return renderTagMeMode(app);
     case 'wordFocus': return renderWordFocus(app);
     case 'flashKind': return renderFlashKindPick(app);
     case 'flashSets': return renderFlashSetHub(app);
@@ -2181,7 +3339,7 @@ function loadFile(file){
       if (!data.classes) throw new Error('Invalid format: no classes found');
       const classKeys = Object.keys(data.classes);
       if (classKeys.length === 0) throw new Error('No classes found in file');
-      state.data = data;
+      state.data = normalizeImportedTrackerData(data);
       // Reset any previous class selection so the picker shows
       state.classKey = null;
       state.passwords = {};
@@ -2450,7 +3608,20 @@ window.regeneratePasswords = () => {
 // ============================================================
 // PROFILE
 // ============================================================
-window.playSound = (text) => { speak(text); };
+window.playSound = (text, type, exampleWord) => {
+  const track = type === 'hw' ? 'hw' : type === 'gpc' ? 'gpc' : null;
+  if (track === 'gpc' && exampleWord) {
+    const audioData = getGpcAudioSource(text, exampleWord);
+    if (audioData) {
+      try {
+        const audio = new Audio(audioData);
+        audio.play().catch(() => {});
+        return;
+      } catch (e) {}
+    }
+  }
+  speak(text, track);
+};
 
 function profileTrackBannerArt(track) {
   const stroke = track === 'gpc' ? '#7dd3fc' : '#fda4af';
@@ -2499,8 +3670,27 @@ function profileSectionIcon(kind) {
   return icons[kind] || '';
 }
 
+function profileGpcTargetChip(item) {
+  const gpcLabel = String(item.gpc ?? gpcDisplayPhoneme(gpcPoolKey(item)) ?? '').trim();
+  const hasAud = hasGpcItemAudio(item);
+  const borderCls = flashBorderClass(gpcPoolKey(item));
+  const exampleWord = item.exampleWord || resolveGpcExampleWord(gpcPoolKey(item)) || item.gpc;
+  const escWord = exampleWord.replace(/'/g, "\\'");
+  const escGpc = item.gpc.replace(/'/g, "\\'");
+  const escEx = String(item.exampleWord ?? '').replace(/'/g, "\\'");
+  const playArgs = escEx
+    ? `'${escGpc}','gpc','${escEx}'`
+    : `'${escGpc}','gpc'`;
+  return `<div class="inline-flex items-center gap-1 bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border-cyan-300/40 border rounded-xl px-3 py-2 ${borderCls}">
+    <button type="button" class="profile-word-chip-btn" onclick="openWordFocus('${escWord}','gpc')" aria-label="Show example word for ${gpcLabel}">
+      <span class="text-xl font-bold">${escapeHtmlText(gpcLabel)}</span>
+    </button>
+    ${hasAud ? `<button type="button" onclick="event.stopPropagation(); playSound(${playArgs})" class="ml-1 w-8 h-8 rounded-full bg-yellow-400/30 hover:bg-yellow-400/60 text-base transition transform hover:scale-110" title="Listen">🔊</button>` : ''}
+  </div>`;
+}
+
 function profileTargetChip(value, type) {
-  const hasAud = hasAudio(value);
+  const hasAud = hasAudio(value, type === 'hw' ? 'hw' : 'gpc');
   const borderCls = flashBorderClass(value);
   const grad = type === 'gpc'
     ? 'bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border-cyan-300/40'
@@ -2513,7 +3703,7 @@ function profileTargetChip(value, type) {
     <button type="button" class="profile-word-chip-btn" onclick="openWordFocus('${escWord}','${type}')" aria-label="Read ${focusWord}">
       <span class="${textCls} font-bold">${value}</span>
     </button>
-    ${hasAud ? `<button type="button" onclick="event.stopPropagation(); playSound('${escAud}')" class="ml-1 w-8 h-8 rounded-full bg-yellow-400/30 hover:bg-yellow-400/60 text-base transition transform hover:scale-110" title="Listen">🔊</button>` : ''}
+    ${hasAud ? `<button type="button" onclick="event.stopPropagation(); playSound('${escAud}','${type}')" class="ml-1 w-8 h-8 rounded-full bg-yellow-400/30 hover:bg-yellow-400/60 text-base transition transform hover:scale-110" title="Listen">🔊</button>` : ''}
   </div>`;
 }
 
@@ -2521,21 +3711,23 @@ function buildProfileSortedTargets(items, valueKey, type) {
   const got = [];
   const tricky = [];
   const unchecked = [];
+  const flashValue = (item) => type === 'gpc' ? gpcPoolKey(item) : item[valueKey];
+  const renderChip = (item) => type === 'gpc' ? profileGpcTargetChip(item) : profileTargetChip(item[valueKey], type);
   items.forEach(item => {
-    const value = item[valueKey];
+    const value = flashValue(item);
     const status = getFlashStatus(value);
     if (status === 'got') got.push(item);
     else if (status === 'tricky') tricky.push(item);
     else unchecked.push(item);
   });
   const gotHtml = got.length
-    ? got.map(x => profileTargetChip(x[valueKey], type)).join('')
+    ? got.map(renderChip).join('')
     : `<span class="profile-target-empty">None yet</span>`;
   const trickyHtml = tricky.length
-    ? tricky.map(x => profileTargetChip(x[valueKey], type)).join('')
+    ? tricky.map(renderChip).join('')
     : `<span class="profile-target-empty">None yet</span>`;
   const uncheckedHtml = unchecked.length
-    ? unchecked.map(x => profileTargetChip(x[valueKey], type)).join('')
+    ? unchecked.map(renderChip).join('')
     : '';
   const uncheckedBlock = uncheckedHtml
     ? `<div class="profile-target-unchecked"><div class="flex flex-wrap gap-2">${uncheckedHtml}</div></div>`
@@ -2607,6 +3799,14 @@ function profileTrackIllustration(track, step) {
       <circle cx="128" cy="44" r="10" fill="#fde047"/>
       <circle cx="138" cy="72" r="9" fill="#e11d48"/>
     </svg>`;
+    if (step === 3) return `<svg class="game-track-svg" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      ${badge}
+      <rect x="44" y="40" width="72" height="40" rx="12" fill="#f43f5e"/>
+      <text x="58" y="68" text-anchor="middle" font-size="24" font-weight="800" fill="#fff" font-family="Andika,sans-serif">t</text>
+      <text x="80" y="68" text-anchor="middle" font-size="24" font-weight="800" fill="#fecdd3" font-family="Andika,sans-serif">e</text>
+      <text x="102" y="68" text-anchor="middle" font-size="24" font-weight="800" fill="#fff" font-family="Andika,sans-serif">h</text>
+      <path d="M118 48 L126 56 L118 64" stroke="#fde047" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
     return `<svg class="game-track-svg" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       ${badge}
       <rect x="52" y="40" width="22" height="32" rx="6" fill="#fda4af" stroke="#fff" stroke-width="2"/>
@@ -2631,10 +3831,36 @@ function profileFlashIllustration() {
   </svg>`;
 }
 
+function readingGameCabinetCard({ id, track, title, desc, emoji, disabled, played }) {
+  const dis = disabled ? ' disabled' : '';
+  const lockedClass = disabled ? ' arcade-cabinet-card--locked' : '';
+  const footer = disabled
+    ? '<div class="arcade-cabinet-cost">No targets yet</div>'
+    : played
+      ? '<div class="arcade-cabinet-cost arcade-cabinet-cost--done">✓ Played</div>'
+      : '<div class="arcade-cabinet-cost">Play</div>';
+  return `
+    <button type="button" data-start-game="${id}"${dis}
+      class="arcade-cabinet-card arcade-cabinet-card--reading arcade-cabinet-card--${track}${lockedClass}"
+      aria-label="${title}${played ? ' — played' : ''}${disabled ? ' — unavailable' : ''}">
+      <div class="arcade-cabinet-marquee-trim arcade-cabinet-marquee-trim--${track}" aria-hidden="true"></div>
+      <div class="arcade-marquee">
+        <div class="arcade-marquee-screen">
+          <span class="arcade-marquee-icon" aria-hidden="true">${emoji}</span>
+        </div>
+        <h3 class="arcade-marquee-title arcade-title-friendly">${title}</h3>
+      </div>
+      <div class="arcade-cabinet-body arcade-cabinet-body--reading">
+        <p class="arcade-cabinet-desc arcade-instructions">${desc}</p>
+        ${footer}
+      </div>
+    </button>`;
+}
+
 function profileTrackCard({ id, track, step, title, disabled, played }) {
   const dis = disabled ? 'disabled' : '';
   const check = played ? '<span class="game-track-check" aria-hidden="true">✓</span>' : '';
-  return `<button type="button" onclick="startGame('${id}')" ${dis}
+  return `<button type="button" data-start-game="${id}" ${dis}
     class="game-track-card game-track-${track} game-track-step-${step} relative"
     aria-label="${title}${played ? ' — played' : ''}">
     ${check}
@@ -2648,8 +3874,8 @@ function buildBoardSpacesHtml(name, bd, positions, pieceSelected) {
   return positions.map((pos, i) => {
     const isStart = i === 0;
     const isFinish = i >= BOARD_FINISH_INDEX;
-    const bonusId = getBoardBonusArcadeId(i);
-    const gameId = getBoardSpaceGameId(i);
+    const bonusId = getBoardBonusArcadeId(i, bd);
+    const gameId = getBoardSpaceGameId(i, bd);
     const disabled = gameId && !isBoardGameAvailable(name, gameId);
     const played = gameId && bd.playedGames.includes(gameId);
     const currentP1 = pieceSelected && bd.position === i;
@@ -2727,6 +3953,7 @@ function removeBoardGamePrompt() {
 
 function clearBoardOverlays() {
   removeBoardGamePrompt();
+  removeBoardPassQuitOverlay();
   document.getElementById('boardCheckInOverlay')?.remove();
   document.getElementById('boardReturnOkOverlay')?.remove();
 }
@@ -2755,8 +3982,10 @@ function showBoardGamePrompt(gameId, squareIndex, boardPlayer = 1) {
   overlay.querySelector('#boardGamePromptGo').addEventListener('click', () => {
     sfxClick();
     removeBoardGamePrompt();
-    const diceBtn = document.getElementById('boardDiceBtn');
-    if (diceBtn) diceBtn.disabled = false;
+    const name = state.selectedStudent;
+    const bd = getBoardState(name);
+    bd.awaitingTurnComplete = true;
+    saveBoardState(name, bd);
     startGame(gameId, { fromBoard: true, boardSquare: squareIndex, boardPlayer });
   });
 }
@@ -2784,6 +4013,10 @@ function showBoardBonusPrompt(arcadeId, squareIndex, boardPlayer = 1) {
   overlay.querySelector('#boardBonusPromptGo').addEventListener('click', () => {
     sfxClick();
     removeBoardGamePrompt();
+    const name = state.selectedStudent;
+    const bd = getBoardState(name);
+    bd.awaitingTurnComplete = true;
+    saveBoardState(name, bd);
     launchArcadeFromBoard(arcadeId);
   });
 }
@@ -2792,6 +4025,10 @@ function showBoardReturnOkPrompt() {
   document.getElementById('boardReturnOkOverlay')?.remove();
   state.arcadeFromBoard = false;
   state.arcadeGame = null;
+  if (state.boardReturnView === 'tagme') {
+    showTagMeReturnOkPrompt();
+    return;
+  }
   state.view = 'adventure';
   const overlay = document.createElement('div');
   overlay.id = 'boardReturnOkOverlay';
@@ -2800,7 +4037,9 @@ function showBoardReturnOkPrompt() {
   overlay.setAttribute('aria-modal', 'true');
   overlay.innerHTML = `
     <div class="profile-board-piece-panel">
-      <h2 class="arcade-title-friendly text-xl font-bold mb-3">Great game!</h2>
+      <div class="game-end-board-celebrate mb-2" aria-hidden="true">🎉✨🌟</div>
+      <h2 class="arcade-title-friendly text-xl font-bold mb-1">Great game!</h2>
+      <p class="text-sm text-white/85 mb-3 arcade-instructions">Good try! Practice makes progress!</p>
       <p class="board-game-prompt-hint mb-4">Press OK to return to the board</p>
       <button type="button" class="board-game-prompt-go" id="boardReturnOkBtn">OK</button>
     </div>`;
@@ -2808,9 +4047,7 @@ function showBoardReturnOkPrompt() {
   overlay.querySelector('#boardReturnOkBtn').addEventListener('click', () => {
     sfxClick();
     overlay.remove();
-    render();
-    const diceBtn = document.getElementById('boardDiceBtn');
-    if (diceBtn) diceBtn.disabled = false;
+    resumeAdventureAfterActivity();
   });
 }
 
@@ -2819,16 +4056,20 @@ function initArcadeGameState(gameId) {
     state.arcade = {
       board: Array(9).fill(null),
       cellItems: assignFocusItems(9),
-      playerTurn: true, winner: null, finished: false, winLine: null,
+      playerTurn: true, winner: null, finished: false, winLine: null, endPopupReady: false,
     };
   } else if (gameId === 'c4') {
     state.arcade = {
       board: Array(6).fill(null).map(() => Array(7).fill(null)),
       cellItems: Array(6).fill(null).map(() => assignFocusItems(7)),
-      playerTurn: true, winner: null, finished: false, winCells: null, lastMove: null,
+      playerTurn: true, winner: null, finished: false, winCells: null, lastMove: null, endPopupReady: false,
     };
   } else if (gameId === 'slime') {
-    state.arcade = { finished: false, score: 0, allFound: false };
+    state.arcade = { finished: false, score: 0, allFound: false, endPopupReady: false };
+  } else if (gameId === 'pong') {
+    state.arcade = { finished: false, winner: null, endPopupReady: false };
+  } else if (gameId === 'brickbreaker' || gameId === 'snake') {
+    state.arcade = { finished: false, won: false, score: 0, endPopupReady: false };
   } else {
     state.arcade = null;
   }
@@ -2846,21 +4087,43 @@ window.launchArcadeFromBoard = (gameId) => {
 };
 
 window.returnToBoardFromArcade = () => {
-  if (window._pongParentPointer) {
-    window.removeEventListener('mousemove', window._pongParentPointer);
-    window.removeEventListener('pointermove', window._pongParentPointer);
-    window._pongParentPointer = null;
+  const name = state.selectedStudent;
+  const isTagMe = state.boardReturnView === 'tagme';
+  if (!state.arcadeFromBoard || !state.arcade) {
+    exitArcadeGame();
+    return;
   }
-  if (window._pongWinHandler) {
-    window.removeEventListener('message', window._pongWinHandler);
-    window._pongWinHandler = null;
+  if (state.arcade.finished) {
+    teardownArcadeBoardSession();
+    showBoardReturnOkPrompt();
+    return;
   }
-  if (window._treasureHandler) {
-    window.removeEventListener('message', window._treasureHandler);
-    window._treasureHandler = null;
+  if (!name) {
+    teardownArcadeBoardSession();
+    state.arcade = null;
+    state.arcadeGame = null;
+    state.arcadeFromBoard = false;
+    state.view = isTagMe ? 'tagme' : 'adventure';
+    render();
+    return;
   }
-  showBoardReturnOkPrompt();
+  showBoardPassQuitPrompt({
+    isTagMe,
+    onYes: () => abandonBoardArcadeAndEndTurn(name, isTagMe),
+  });
 };
+
+function scheduleArcadeEndPopup() {
+  const a = state.arcade;
+  if (!a) return;
+  a.endPopupReady = false;
+  setTimeout(() => {
+    if (!state.arcade || state.arcade !== a || !a.finished) return;
+    a.endPopupReady = true;
+    render();
+    maybeShowBoardArcadeReturnPrompt();
+  }, 3000);
+}
 
 function maybeShowBoardArcadeReturnPrompt() {
   if (!state.arcadeFromBoard || state._boardArcadeReturnPending) return;
@@ -2871,6 +4134,7 @@ function maybeShowBoardArcadeReturnPrompt() {
 function resetBoardToStart(name) {
   const bd = getBoardState(name);
   bd.position = 0;
+  bd.passesUsed = 0;
   saveBoardState(name, bd);
 }
 
@@ -2910,15 +4174,20 @@ function promptBoardCheckIn(name) {
 }
 
 async function celebrateBoardFinish(name) {
-  addPoints(name, BOARD_FINISH_BONUS);
+  const bonus = boardPassesExhausted(name, false) ? 0 : BOARD_FINISH_BONUS;
+  if (bonus > 0) addPoints(name, bonus);
+  resetBoardPasses(name, false);
   for (let i = 0; i < 6; i++) setTimeout(() => confetti(), i * 220);
   const overlay = document.createElement('div');
   overlay.className = 'board-finish-overlay fadeIn';
+  const starsLine = bonus > 0
+    ? `<p class="board-finish-sub">+${bonus} Starcade stars!</p>`
+    : `<p class="board-finish-sub board-finish-sub--muted">You used all ${BOARD_MAX_PASSES} passes — no bonus stars this time.</p>`;
   overlay.innerHTML = `
     <div class="board-finish-panel">
       <div class="board-finish-emoji">👑🎉</div>
       <p class="board-finish-title">You reached the finish!</p>
-      <p class="board-finish-sub">+${BOARD_FINISH_BONUS} Starcade stars!</p>
+      ${starsLine}
     </div>`;
   document.body.appendChild(overlay);
   await new Promise(r => setTimeout(r, 3200));
@@ -2926,8 +4195,7 @@ async function celebrateBoardFinish(name) {
   await promptBoardCheckIn(name);
 }
 
-function renderProfile(app){
-  const name = state.selectedStudent;
+function buildProfilePageData(name) {
   if (state.classKey && state.gamePlayed[name] === undefined) {
     try {
       const v = localStorage.getItem(gamePlayedKey(name));
@@ -2938,7 +4206,10 @@ function renderProfile(app){
   const points = getPoints(name);
   const hasGpcTargets = needs.targetGpcs.length > 0;
   const hasHwTargets = needs.targetHws.length > 0;
+  const hasGpcPractice = hasGpcPracticePool(needs);
+  const hasHwPractice = hasHwPracticePool(needs);
   const hasAnyTargets = hasGpcTargets || hasHwTargets;
+  const hasAnyPractice = hasAnyPracticePool(needs);
   const playedMap = getGamePlayedMap(name);
   const flashPlayed = !!playedMap.flash;
 
@@ -2953,81 +4224,284 @@ function renderProfile(app){
   const flashMap = state.flashResults[name] || {};
   const hasFlashMarks = Object.keys(flashMap).length > 0;
 
-  const collectionItems = [...needs.masteredGpcs.map(x => x.gpc), ...needs.masteredHws.map(x => x.hw)];
-  const collectionHtml = collectionItems.length
-    ? collectionItems.slice(0, 30).map(x => {
-        const hasAud = hasAudio(x);
-        const borderCls = flashBorderClass(x);
-        const focusWord = resolveGpcExampleWord(x) || x;
+  const wallOfFameSeen = new Set();
+  const wallOfFameItems = [];
+  const pushWallOfFameItem = (value, type, item = null) => {
+    const key = type === 'gpc' && item
+      ? `gpc:${item.unitIdx}:${item.slotIdx}`
+      : `${type}:${String(value).toLowerCase()}`;
+    if (wallOfFameSeen.has(key)) return;
+    wallOfFameSeen.add(key);
+    wallOfFameItems.push({ value, type, item });
+  };
+  needs.masteredGpcs.forEach(x => pushWallOfFameItem(gpcPoolKey(x), 'gpc', x));
+  needs.masteredHws.forEach(x => pushWallOfFameItem(x.hw, 'hw', x));
+  const collectionHtml = wallOfFameItems.length
+    ? wallOfFameItems.map(({ value, type, item }) => {
+        if (type === 'gpc' && item) return profileGpcTargetChip(item);
+        const kind = type;
+        const hasAud = hasAudio(value, kind);
+        const borderCls = flashBorderClass(value);
+        const focusWord = value;
         const escFocus = focusWord.replace(/'/g, "\\'");
-        const escAud = x.replace(/'/g, "\\'");
-        const kind = /^[a-z]{1,4}$/i.test(x) && !HW_SENTENCES[x.toLowerCase()] && !LONG_VOWEL_WORD_INDEX[x.toLowerCase()] ? 'gpc' : 'hw';
+        const escAud = value.replace(/'/g, "\\'");
         return `<span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-400/20 border border-yellow-300/30 rounded-md text-sm ${borderCls}">
-          <button type="button" class="profile-word-chip-btn text-sm" onclick="openWordFocus('${escFocus}','${kind}')" aria-label="Read ${focusWord}">${x}</button>
-          ${hasAud ? `<button type="button" onclick="event.stopPropagation(); playSound('${escAud}')" class="w-5 h-5 rounded-full bg-yellow-400/30 hover:bg-yellow-400/60 text-xs transition" title="Listen">🔊</button>` : ''}
+          <button type="button" class="profile-word-chip-btn text-sm" onclick="openWordFocus('${escFocus}','${kind}')" aria-label="Read ${focusWord}">${escapeHtmlText(value)}</button>
+          ${hasAud ? `<button type="button" onclick="event.stopPropagation(); playSound('${escAud}','${kind}')" class="w-5 h-5 rounded-full bg-yellow-400/30 hover:bg-yellow-400/60 text-xs transition" title="Listen">🔊</button>` : ''}
         </span>`;
       }).join(' ')
-    : `<div class="text-white/50 italic text-sm">Play games to build your collection!</div>`;
+    : `<div class="text-white/50 italic text-sm">Master sounds and words in games to fill your Wall of Fame!</div>`;
+
+  return {
+    name,
+    needs,
+    points,
+    hasGpcTargets,
+    hasHwTargets,
+    hasGpcPractice,
+    hasHwPractice,
+    hasAnyTargets,
+    hasAnyPractice,
+    playedMap,
+    flashPlayed,
+    gpcTargetsHtml,
+    hwTargetsHtml,
+    hasFlashMarks,
+    collectionHtml,
+  };
+}
+
+function renderStudentSubpageTopbar(title, points) {
+  return `
+    <header class="student-subpage-topbar fadeIn">
+      <button type="button" onclick="backToStudentMenu()" class="student-menu-back">← Menu</button>
+      <h1 class="student-subpage-title">${title}</h1>
+      <div class="student-menu-stars" aria-label="Stars earned">⭐ ${points}</div>
+    </header>`;
+}
+
+function renderSignpostIcon(kind) {
+  const s = 'currentColor';
+  const w = 2;
+  const icons = {
+    sounds: `<span class="signpost-sign-icons" aria-hidden="true">
+      <svg class="signpost-sign-icon" viewBox="0 0 24 24" fill="none" stroke="${s}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      <svg class="signpost-sign-icon" viewBox="0 0 24 24" fill="none" stroke="${s}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 8.5a6.5 6.5 0 0 1 13 0c0 6-6 6-6 10a3.5 3.5 0 0 1-7 0"/>
+        <path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 0 1 0 4"/>
+      </svg>
+    </span>`,
+    fame: `<svg class="signpost-sign-icon" viewBox="0 0 24 24" fill="none" stroke="${s}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M7 9H5a2 2 0 0 0 0 4h2"/>
+      <path d="M17 9h2a2 2 0 0 1 0 4h-2"/>
+      <path d="M8 7h8"/>
+      <path d="M8 7v2.5c0 2.8 1.8 5 4 5s4-2.2 4-5V7"/>
+      <path d="M12 14.5v3"/>
+      <path d="M8 18.5h8"/>
+      <path d="M9 20.5h6"/>
+    </svg>`,
+    adventure: `<svg class="signpost-sign-icon" viewBox="0 0 24 24" fill="none" stroke="${s}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <path d="M3 9h18"/>
+      <path d="M9 3v18"/>
+      <circle cx="15" cy="15" r="1.5" fill="${s}" stroke="none"/>
+      <circle cx="7" cy="7" r="1" fill="${s}" stroke="none"/>
+    </svg>`,
+    tagme: `<svg class="signpost-sign-icon signpost-sign-icon--filled" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+      <circle cx="14.2" cy="4.4" r="2.2"/>
+      <path d="M11.2 8.2h3.6c.35 0 .65.22.78.55l.85 2.55c.12.36-.02.75-.35.95l-1.65 1.05 1.05 4.35c.12.48-.18.96-.66 1.08-.48.12-.96-.18-1.08-.66l-.95-4.05-2.15 3.65c-.25.42-.78.56-1.2.31l-1.25-.72c-.42-.24-.56-.77-.31-1.19l2.45-4.15-1.55-1.18c-.32-.24-.42-.68-.28-1.04l.48-1.42c.14-.42.54-.68.98-.68h.82l.22-.95c.12-.52.58-.88 1.12-.88z"/>
+    </svg>`,
+    check: `<svg class="signpost-sign-icon" viewBox="0 0 24 24" fill="none" stroke="${s}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="3"/>
+      <path d="M8 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/>
+      <path d="M19 6a7 7 0 1 1-2.05 4.95"/>
+      <polyline points="17 6 19 6 19 4"/>
+    </svg>`,
+    starcade: `<svg class="signpost-sign-icon" viewBox="0 0 24 24" fill="none" stroke="${s}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18.5 5.5 22 7 14.5 2 9.5 9 9"/>
+    </svg>`,
+    soundgames: `<svg class="signpost-sign-icon" viewBox="0 0 24 24" fill="none" stroke="${s}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="2" y="7" width="20" height="12" rx="3"/>
+      <path d="M6 11h2v2H6z"/>
+      <path d="M10 10h2v4h-2z"/>
+      <path d="M14 9h2v6h-2z"/>
+      <path d="M18 11h2v2h-2z"/>
+      <path d="M8 7V5a4 4 0 0 1 8 0v2"/>
+    </svg>`,
+  };
+  return icons[kind] || '';
+}
+
+function renderSignpostSign({ label, side, tone, slot, icon, onclick, disabled, ariaLabel, point = 'out' }) {
+  const dis = disabled ? ' disabled' : '';
+  const action = disabled ? '' : ` onclick="${onclick}"`;
+  const iconHtml = renderSignpostIcon(icon);
+  const content = side === 'left'
+    ? `<span class="signpost-sign-text">${label}</span>${iconHtml}`
+    : `${iconHtml}<span class="signpost-sign-text">${label}</span>`;
+  const pointCls = point && point !== 'out' ? ` signpost-sign--point-${point}` : '';
+  return `
+    <button type="button" class="signpost-sign signpost-sign--${side} signpost-sign--${tone} signpost-sign--slot-${slot}${pointCls}"${action}${dis}
+      aria-label="${ariaLabel || label}">
+      <span class="signpost-sign-content">${content}</span>
+      <span class="signpost-sign-nail" aria-hidden="true"></span>
+    </button>`;
+}
+
+function renderProfile(app) {
+  const { name, points, hasAnyPractice } = buildProfilePageData(state.selectedStudent);
+  const displayName = name.replace(/^Student\s+/i, '');
+
+  const leftSigns = [
+    renderSignpostSign({
+      label: 'Sounds and Words',
+      side: 'left',
+      tone: 'sounds',
+      slot: 1,
+      icon: 'sounds',
+      point: 'arm',
+      onclick: 'openSoundsWordsPage()',
+      ariaLabel: 'Sounds and Words — my reading targets',
+    }),
+    renderSignpostSign({
+      label: 'Play games',
+      side: 'left',
+      tone: 'soundgames',
+      slot: 3,
+      icon: 'soundgames',
+      point: 'arm',
+      onclick: 'openReadingGamesPage()',
+      ariaLabel: 'Play games — sound and word reading games',
+    }),
+    renderSignpostSign({
+      label: 'Adventure Board',
+      side: 'left',
+      tone: 'adventure',
+      slot: 5,
+      icon: 'adventure',
+      point: 'arm',
+      onclick: 'openAdventureMode()',
+      disabled: !hasAnyPractice,
+      ariaLabel: 'Adventure Board — roll the dice on the reading board',
+    }),
+    renderSignpostSign({
+      label: 'Check yourself',
+      side: 'left',
+      tone: 'check',
+      slot: 7,
+      icon: 'check',
+      point: 'arm',
+      onclick: 'openSelfCheckFromMenu()',
+      disabled: !hasAnyPractice,
+      ariaLabel: 'Check yourself — self check with your reading targets',
+    }),
+  ].join('');
+
+  const rightSigns = [
+    renderSignpostSign({
+      label: 'Wall of Fame',
+      side: 'right',
+      tone: 'fame',
+      slot: 2,
+      icon: 'fame',
+      point: 'arm',
+      onclick: 'openWallOfFamePage()',
+      ariaLabel: 'Wall of Fame — mastered sounds and words',
+    }),
+    renderSignpostSign({
+      label: 'Tag Me!',
+      side: 'right',
+      tone: 'tagme',
+      slot: 6,
+      icon: 'tagme',
+      point: 'arm',
+      onclick: 'openTagMeMode()',
+      disabled: !hasAnyPractice,
+      ariaLabel: 'Tag Me — race to the finish',
+    }),
+    renderSignpostSign({
+      label: 'Starcade!',
+      side: 'right',
+      tone: 'starcade',
+      slot: 8,
+      icon: 'starcade',
+      point: 'arm',
+      onclick: 'openArcadeMenu()',
+      ariaLabel: 'Starcade — spend stars on bonus games',
+    }),
+  ].join('');
 
   app.innerHTML = `
-    <div class="min-h-screen p-4 md:p-8 student-friendly">
-      <div class="max-w-5xl mx-auto">
-        <button onclick="logoutStudent()" class="text-white/70 hover:text-white mb-4 text-sm">← Back to class (logs out)</button>
-
-        <header class="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-6 mb-6 fadeIn">
-          <div class="flex items-center gap-4 flex-wrap">
-            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-500 flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-xl">${name.replace('Student ','S')}</div>
-            <div class="flex-1 min-w-0">
-              <h1 class="text-2xl md:text-3xl font-bold">Hello, ${name}!</h1>
-            </div>
-            <div class="bg-gradient-to-r from-yellow-400 to-orange-400 text-purple-900 px-4 py-2 rounded-2xl font-bold shadow-lg">
-              <span class="text-xl">⭐</span> <span class="text-xl">${points}</span> <span class="text-xs">stars</span>
-            </div>
-          </div>
-        </header>
-
-        <button type="button" class="adventure-mode-card fadeIn" onclick="openAdventureMode()" ${!hasAnyTargets ? 'disabled' : ''} aria-label="Adventure Mode — roll the dice on the reading board">
-          <p class="adventure-mode-card-title">🗺️ Adventure Mode</p>
-          <p class="adventure-mode-card-sub">Roll the dice, move along the path, and play reading games until you reach the finish!</p>
-        </button>
-
-        <h2 class="text-xl font-bold mb-3 profile-heading-row">${profileSectionIcon('games')}<span>Reading Games</span></h2>
-
-        <section class="game-track-section game-track-section-gpc fadeIn" aria-label="Letter sound games">
-          <div class="game-track-banner" aria-hidden="true">${profileTrackBannerArt('gpc')}</div>
-          <div class="game-track-grid">
-            ${profileTrackCard({ id: 'gpcMatch', track: 'gpc', step: 1, title: 'Splat the Sound', disabled: !hasGpcTargets, played: !!playedMap.gpcMatch })}
-            ${profileTrackCard({ id: 'gpcCatch', track: 'gpc', step: 2, title: 'Sound Splat Challenge!', disabled: !hasGpcTargets, played: !!playedMap.gpcCatch })}
-            ${profileTrackCard({ id: 'soundFlip', track: 'gpc', step: 3, title: 'Sound Flip', disabled: !hasGpcTargets, played: !!playedMap.soundFlip })}
-            ${profileTrackCard({ id: 'soundBox', track: 'gpc', step: 4, title: 'Sound Box', disabled: !hasGpcTargets, played: !!playedMap.soundBox })}
-          </div>
-        </section>
-
-        <section class="game-track-section game-track-section-heart fadeIn" aria-label="Tricky word games">
-          <div class="game-track-banner" aria-hidden="true">${profileTrackBannerArt('heart')}</div>
-          <div class="game-track-grid">
-            ${profileTrackCard({ id: 'hwHunt', track: 'heart', step: 1, title: 'Splat the Word!', disabled: !hasHwTargets, played: !!playedMap.hwHunt })}
-            ${profileTrackCard({ id: 'hwBlank', track: 'heart', step: 2, title: 'Word Challenge!', disabled: !hasHwTargets, played: !!playedMap.hwBlank })}
-            ${profileTrackCard({ id: 'hwBoxes', track: 'heart', step: 3, title: 'Word Box', disabled: !hasHwTargets, played: !!playedMap.hwBoxes })}
-          </div>
-        </section>
-
-        <div class="flex justify-center mb-6 fadeIn">
-          <button type="button" onclick="startGame('flash')" ${!hasAnyTargets ? 'disabled' : ''}
-            class="game-track-card game-track-flash w-full max-w-[14rem] relative"
-            aria-label="Self Check${flashPlayed ? ' — used' : ''}">
-            ${flashPlayed ? '<span class="game-track-check" aria-hidden="true">✓</span>' : ''}
-            <div class="game-track-visual">${profileFlashIllustration()}</div>
-            <h3 class="game-track-title arcade-title-friendly">Self Check</h3>
-            <p class="text-xs text-white/85 mt-1 px-2 leading-snug">Check which sounds and words you know</p>
-          </button>
+    <div class="student-menu-screen student-friendly fadeIn">
+      <header class="student-menu-topbar">
+        <div class="student-menu-topbar-left">
+          <button type="button" onclick="logoutStudent()" class="student-menu-back">← Back to class</button>
+          <h1 class="student-menu-name">${escapeHtmlText(displayName)}</h1>
         </div>
+        <div class="student-menu-stars" aria-label="Stars earned">⭐ ${points}</div>
+      </header>
+      <main class="student-menu-main">
+        <div class="student-menu-sky" aria-hidden="true">
+          <span class="student-menu-cloud student-menu-cloud--1"></span>
+          <span class="student-menu-cloud student-menu-cloud--2"></span>
+          <span class="student-menu-cloud student-menu-cloud--3"></span>
+          <span class="student-menu-cloud student-menu-cloud--4"></span>
+        </div>
+        <nav class="signpost" aria-label="Choose where to go">
+          <div class="signpost-col signpost-col--left">${leftSigns}</div>
+          <div class="signpost-pole-col" aria-hidden="true">
+            <div class="signpost-pole-cap"></div>
+            <div class="signpost-pole"></div>
+          </div>
+          <div class="signpost-col signpost-col--right">${rightSigns}</div>
+        </nav>
+      </main>
+    </div>`;
+}
 
-        <details class="profile-targets-details bg-gradient-to-br from-indigo-600/30 to-purple-700/30 backdrop-blur border border-indigo-300/40 rounded-2xl p-6 fadeIn mb-4" open>
-          <summary class="profile-targets-summary profile-heading-row">
-            ${profileSectionIcon('targets')}<span>My Reading Targets</span>
-            <span class="profile-targets-chevron" aria-hidden="true">▼</span>
-          </summary>
+function resolveProfileGameReturnView(g) {
+  if (g?.fromTagMe) return 'tagme';
+  if (g?.fromBoard) return 'adventure';
+  return g?.readingReturnView || 'profileReadingGames';
+}
+
+function profileGameBackLabel(view) {
+  if (view === 'tagme') return 'Back to Tag Me!';
+  if (view === 'adventure') return 'Back to adventure';
+  if (view === 'profileSoundsWords') return 'Back to Sounds and Words';
+  return 'Back to reading games';
+}
+
+function getHtmlGameEmbedUrl(fileName) {
+  const base = fileName.split('?')[0];
+  const qs = fileName.includes('?') ? fileName.slice(fileName.indexOf('?')) : '?embed=1';
+  const pathPart = (window.location.pathname || '').replace(/\\/g, '/');
+  const href = (window.location.href || '').replace(/\\/g, '/');
+  const inWebPilot = /\/web-pilot(?:\/|$)/.test(pathPart) || /\/web-pilot\//.test(href);
+  const folder = inWebPilot ? '../HTML games/' : 'HTML games/';
+  return encodeURI(folder + base) + qs;
+}
+
+function renderProfileSoundsWords(app) {
+  const data = buildProfilePageData(state.selectedStudent);
+  const {
+    hasFlashMarks,
+    points,
+    gpcTargetsHtml,
+    hwTargetsHtml,
+  } = data;
+
+  app.innerHTML = `
+    <div class="student-subpage student-friendly">
+      ${renderStudentSubpageTopbar('Sounds and Words', points)}
+      <div class="student-subpage-body">
+        <div class="profile-targets-details bg-gradient-to-br from-indigo-600/30 to-purple-700/30 backdrop-blur border border-indigo-300/40 rounded-2xl p-6 fadeIn mb-4">
+          <div class="profile-heading-row mb-4">
+            ${profileSectionIcon('targets')}<span class="text-xl font-bold">My Reading Targets</span>
+          </div>
           <div class="profile-targets-body">
             ${hasFlashMarks ? `
               <div class="profile-flash-legend">
@@ -3044,29 +4518,126 @@ function renderProfile(app){
               ${hwTargetsHtml}
             </div>
           </div>
-        </details>
+        </div>
+      </div>
+    </div>`;
+  restoreProfileScrollIfNeeded();
+}
 
-        <details class="bg-white/5 rounded-2xl p-5 mb-6 fadeIn">
-          <summary class="cursor-pointer font-semibold profile-heading-row">${profileSectionIcon('collection')}<span>Your word collection</span></summary>
-          <div class="flex flex-wrap gap-2 mt-3">${collectionHtml}</div>
-        </details>
+function renderProfileReadingGames(app) {
+  const name = state.selectedStudent;
+  if (completeReadingTrackCycleIfReady(name)) {
+    state.readingTrackBonusPopup = true;
+  }
+  const data = buildProfilePageData(name);
+  const {
+    hasGpcPractice,
+    hasHwPractice,
+    playedMap,
+    points,
+  } = data;
 
-        <div class="mt-4 pt-6 border-t border-white/10">
-          <button onclick="openArcadeMenu()" class="w-full bg-white/5 hover:bg-white/10 border border-white/15 rounded-2xl p-6 fadeIn flex flex-col items-center justify-center text-center transition transform hover:scale-[1.02]">
-            ${profileSectionIcon('starcade')}
-            <div class="mt-2 font-extrabold text-xl arcade-title-friendly">Starcade Bonus</div>
-          </button>
+  const soundGames = [
+    { id: 'gpcMatch', title: 'Splat the Sound', emoji: '🎯', desc: 'Tap the sound that matches.' },
+    { id: 'gpcCatch', title: 'Sound Splat Challenge!', emoji: '⚡', desc: 'Catch the right sounds.' },
+    { id: 'soundFlip', title: 'Sound Flip', emoji: '🔄', desc: 'Flip cards to find sounds.' },
+    { id: 'soundBox', title: 'Sound Box', emoji: '📦', desc: 'Sort sounds into boxes.' },
+  ];
+  const wordGames = [
+    { id: 'hwHunt', title: 'Splat the Word!', emoji: '🔍', desc: 'Find your tricky words.' },
+    { id: 'hwBlank', title: 'Word Challenge!', emoji: '✏️', desc: 'Fill in the missing letters.' },
+    { id: 'hwJumble', title: 'Word Jumble', emoji: '🔀', desc: 'Unjumble the word.' },
+    { id: 'hwBoxes', title: 'Word Box', emoji: '📦', desc: 'Sort words into boxes.' },
+  ];
+
+  const gpcCards = soundGames.map(g => readingGameCabinetCard({
+    ...g,
+    track: 'gpc',
+    disabled: !hasGpcPractice,
+    played: !!playedMap[g.id],
+  })).join('');
+
+  const hwCards = wordGames.map(g => readingGameCabinetCard({
+    ...g,
+    track: 'heart',
+    disabled: !hasHwPractice,
+    played: !!playedMap[g.id],
+  })).join('');
+
+  app.innerHTML = `
+    <div class="student-subpage student-friendly reading-games-page">
+      ${renderStudentSubpageTopbar('Play games', points)}
+      <div class="student-subpage-body">
+        <p class="arcade-instructions text-center text-white/85 mb-6 max-w-xl mx-auto">Practise your reading targets with these games.</p>
+
+        <section class="reading-games-section fadeIn" aria-label="Sound games">
+          <h2 class="reading-games-section-title reading-games-section-title--gpc arcade-title-friendly">Sound games</h2>
+          <div class="arcade-menu-grid reading-games-grid">${gpcCards}</div>
+        </section>
+
+        <section class="reading-games-section reading-games-section--heart fadeIn mt-8" aria-label="Word games">
+          <h2 class="reading-games-section-title reading-games-section-title--heart arcade-title-friendly">Word games</h2>
+          <div class="arcade-menu-grid reading-games-grid">${hwCards}</div>
+        </section>
+      </div>
+    </div>`;
+  bindProfileGameCards(app);
+  restoreProfileScrollIfNeeded();
+  if (state.readingTrackBonusPopup) {
+    requestAnimationFrame(() => showReadingTrackBonusPopup());
+  }
+}
+
+function renderProfileWallOfFame(app) {
+  const { collectionHtml, points } = buildProfilePageData(state.selectedStudent);
+
+  app.innerHTML = `
+    <div class="student-subpage student-friendly">
+      ${renderStudentSubpageTopbar('Wall of Fame', points)}
+      <div class="student-subpage-body fadeIn">
+        <div class="bg-white/10 backdrop-blur border border-yellow-300/30 rounded-2xl p-6 md:p-8">
+          <div class="profile-heading-row mb-4">
+            ${profileSectionIcon('collection')}<span class="text-xl font-bold">Your mastered sounds and words</span>
+          </div>
+          <div class="flex flex-wrap gap-2">${collectionHtml}</div>
         </div>
       </div>
     </div>`;
 }
 
+function restoreProfileScrollIfNeeded() {
+  if (state.profileRestoreScrollY == null) return;
+  if (state.view !== 'profileSoundsWords' && state.view !== 'profileReadingGames') return;
+  const y = state.profileRestoreScrollY;
+  state.profileRestoreScrollY = null;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, y);
+    });
+  });
+}
+
+function bindProfileGameCards(app) {
+  app.querySelectorAll('[data-start-game]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (btn.disabled) return;
+      const id = btn.getAttribute('data-start-game');
+      if (!id) return;
+      e.preventDefault();
+      startGame(id);
+    });
+  });
+}
+
 function renderAdventureMode(app) {
   const name = state.selectedStudent;
   const needs = getStudentNeeds(name);
-  const hasAnyTargets = needs.targetGpcs.length > 0 || needs.targetHws.length > 0;
+  const hasAnyPractice = hasAnyPracticePool(needs);
   const bd = getBoardState(name);
-  const layout = computeBoardLayout();
+  const layout = computeBoardLayout(BOARD_SPACE_COUNT, BOARD_COLS, {
+    bridgeWidthScale: 0.72,
+    bridgeOverlap: 0.42,
+  });
   const { positions, connectors } = layout;
   const pathD = buildBoardPathRows(positions);
   const pickPhase = getBoardPiecePickPhase(bd);
@@ -3106,12 +4677,12 @@ function renderAdventureMode(app) {
       <span>${activePlayer === 1 ? 'Player 1' : 'Player 2'}&rsquo;s turn</span>
     </div>` : '';
 
-  const diceDisabled = !pieceSelected || state.boardRolling || !hasAnyTargets;
+  const diceDisabled = !pieceSelected || state.boardRolling || !hasAnyPractice || bd.awaitingTurnComplete;
 
   app.innerHTML = `
     <div class="profile-fs student-friendly fadeIn">
       <header class="profile-fs-topbar">
-        <button type="button" class="profile-fs-back" onclick="backToProfileFromAdventure()">← My page</button>
+        <button type="button" class="profile-fs-back" onclick="backToProfileFromAdventure()">← Menu</button>
         <div class="profile-fs-greeting">Adventure Mode</div>
         <div class="profile-fs-stars" aria-label="Stars">⭐ ${getPoints(name)}</div>
       </header>
@@ -3148,10 +4719,6 @@ function renderAdventureMode(app) {
               <span>Roll dice</span>
             </button>
             <p id="boardMsg" class="profile-board-msg" role="status"></p>
-          </div>
-          <div class="profile-fs-panel-section">
-            <div class="profile-fs-panel-label">Key</div>
-            ${buildBoardLegendHtml()}
           </div>
           <button type="button" class="profile-fs-panel-btn${bd.manualMode ? ' profile-fs-panel-btn--active' : ''}" onclick="toggleBoardManualMode()" aria-pressed="${bd.manualMode}">
             <span class="profile-board-side-icon">📋</span>
@@ -3237,6 +4804,8 @@ window.restartAdventureBoard = () => {
   bd.manualMode = false;
   bd.twoPlayerMode = false;
   bd.lastDiceRoll = null;
+  bd.awaitingTurnComplete = false;
+  resetBoardTileShuffle(bd);
   saveBoardState(name, bd);
   clearBoardOverlays();
   state.boardRolling = false;
@@ -3266,7 +4835,7 @@ window.rollBoardDice = async () => {
   const bd = getBoardState(name);
   if (bd.pieceIndex == null || state.boardRolling) return;
   if (bd.twoPlayerMode && bd.pieceIndex2 == null) return;
-  if (!getStudentNeeds(name).targetGpcs.length && !getStudentNeeds(name).targetHws.length) return;
+  if (!hasAnyPracticePool(getStudentNeeds(name))) return;
 
   const player = bd.twoPlayerMode ? (bd.activePlayer || 1) : 1;
   const posKey = player === 2 ? 'position2' : 'position';
@@ -3347,13 +4916,13 @@ async function handleBoardLanding(name, bd, endPos, player, diceBtn) {
     return;
   }
 
-  const bonusId = getBoardBonusArcadeId(endPos);
+  const bonusId = getBoardBonusArcadeId(endPos, bd);
   if (bonusId) {
     showBoardBonusPrompt(bonusId, endPos, player);
     return;
   }
 
-  const gameId = getBoardSpaceGameId(endPos);
+  const gameId = getBoardSpaceGameId(endPos, bd);
   if (gameId && isBoardGameAvailable(name, gameId)) {
     showBoardGamePrompt(gameId, endPos, player);
     return;
@@ -3366,6 +4935,1088 @@ async function handleBoardLanding(name, bd, endPos, player, diceBtn) {
   }
   if (diceBtn) diceBtn.disabled = false;
 }
+
+// ============================================================
+// TAG ME! MODE
+// ============================================================
+function tagMeGameKey(name) { return `ratag_${state.classKey}_${name}`; }
+
+function getTagMeState(name) {
+  if (!state.tagMeGame[name]) {
+    try {
+      const v = localStorage.getItem(tagMeGameKey(name));
+      state.tagMeGame[name] = v ? JSON.parse(v) : null;
+    } catch (e) { state.tagMeGame[name] = null; }
+  }
+  if (!state.tagMeGame[name]) {
+    state.tagMeGame[name] = {
+      pieceIndex: null,
+      chaserIndex: null,
+      position: 0,
+      chaserPosition: 0,
+      userTurnCount: 0,
+      chaseActive: false,
+      playedGames: [],
+      manualMode: false,
+      lastDiceRoll: null,
+      lastChaserRoll: null,
+      awaitingTurnComplete: false,
+      chaseIntroShown: false,
+      passesUsed: 0,
+      chaserTurnActive: false,
+    };
+  }
+  const td = state.tagMeGame[name];
+  if (!Array.isArray(td.playedGames)) td.playedGames = [];
+  if (typeof td.chaserPosition !== 'number') td.chaserPosition = 0;
+  if (typeof td.userTurnCount !== 'number') td.userTurnCount = 0;
+  if (td.chaseIntroShown == null) td.chaseIntroShown = false;
+  if (typeof td.passesUsed !== 'number') td.passesUsed = 0;
+  if (td.chaserTurnActive == null) td.chaserTurnActive = false;
+  ensureBoardTileShuffle(td);
+  if (td.position > BOARD_FINISH_INDEX) td.position = 0;
+  return td;
+}
+
+function saveTagMeState(name, td) {
+  state.tagMeGame[name] = td;
+  try { localStorage.setItem(tagMeGameKey(name), JSON.stringify(td)); } catch (e) {}
+}
+
+function markTagMeGamePlayed(name, gameId) {
+  const td = getTagMeState(name);
+  if (!td.playedGames.includes(gameId)) {
+    td.playedGames.push(gameId);
+    saveTagMeState(name, td);
+  }
+}
+
+function getTagMePickPhase(td) {
+  if (td.pieceIndex == null) return 'piece';
+  if (td.chaserIndex == null) return 'chaser';
+  return null;
+}
+
+function cancelTagMePendingTurn(name) {
+  const td = getTagMeState(name);
+  if (td.awaitingTurnComplete) {
+    td.awaitingTurnComplete = false;
+    saveTagMeState(name, td);
+  }
+}
+
+function updateTagMePositionHud(playerPos, chaserPos) {
+  const p = document.getElementById('tagMeHudPlayerPos');
+  const c = document.getElementById('tagMeHudChaserPos');
+  if (p) p.textContent = String(playerPos + 1);
+  if (c) c.textContent = String(chaserPos + 1);
+}
+
+function updateTagMeTokenBadges(playerPos, chaserPos) {
+  const pt = document.getElementById('tagMePlayerBadge');
+  const ct = document.getElementById('tagMeChaserBadge');
+  if (pt) pt.textContent = String(playerPos + 1);
+  if (ct) ct.textContent = String(chaserPos + 1);
+}
+
+function updateTagMeGapHud(playerPos, chaserPos) {
+  const gap = document.getElementById('tagMeHudGap');
+  if (gap) gap.textContent = String(Math.max(0, playerPos - chaserPos));
+}
+
+function scrollTagMeBoardToSquare(index) {
+  const el = document.querySelector(`[data-tag-square="${index}"]`);
+  const viewport = document.getElementById('tagMeBoardViewport');
+  if (!el || !viewport) return;
+  const elRect = el.getBoundingClientRect();
+  const vpRect = viewport.getBoundingClientRect();
+  const targetLeft = viewport.scrollLeft + (elRect.left + elRect.width / 2) - (vpRect.left + vpRect.width / 2);
+  const targetTop = viewport.scrollTop + (elRect.top + elRect.height / 2) - (vpRect.top + vpRect.height / 2);
+  viewport.scrollTo({
+    left: Math.max(0, targetLeft),
+    top: Math.max(0, targetTop),
+    behavior: 'smooth',
+  });
+}
+
+function isTagMeLandscapeMode() {
+  return window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches;
+}
+
+function getTagMeBoardCols() {
+  return isTagMeLandscapeMode() ? TAG_ME_BOARD_COLS_LANDSCAPE : TAG_ME_BOARD_COLS_PORTRAIT;
+}
+
+function getTagMeBoardAspect() {
+  const layout = getTagMeBoardLayout();
+  return layout.bounds?.aspect || (isTagMeLandscapeMode() ? 1.65 : 0.72);
+}
+
+function fitTagMeBoardToViewport() {
+  const viewport = document.getElementById('tagMeBoardViewport');
+  const arena = document.getElementById('tagMeBoardArena');
+  if (!viewport || !arena) return;
+  const layout = getTagMeBoardLayout();
+  const aspect = layout.bounds?.aspect || getTagMeBoardAspect();
+  const pad = 12;
+  const availW = viewport.clientWidth - pad;
+  const availH = viewport.clientHeight - pad;
+  let boardW = availW;
+  let boardH = boardW / aspect;
+  if (boardH > availH) {
+    boardH = availH;
+    boardW = boardH * aspect;
+  }
+  const minW = isTagMeLandscapeMode() ? 560 : 300;
+  boardW = Math.max(minW, Math.floor(boardW));
+  boardH = Math.floor(boardW / aspect);
+  arena.style.width = `${boardW}px`;
+  arena.style.height = `${boardH}px`;
+}
+
+function buildTagMeSceneryHtml(chaser) {
+  const huntEmoji = chaser?.emoji || '🐾';
+  return `
+    <div class="tagme-scenery" aria-hidden="true">
+      <div class="tagme-scenery-cloud tagme-scenery-cloud--1">☁️</div>
+      <div class="tagme-scenery-cloud tagme-scenery-cloud--2">☁️</div>
+      <div class="tagme-scenery-sun">🌤️</div>
+      <div class="tagme-scenery-tree tagme-scenery-tree--1">🌳</div>
+      <div class="tagme-scenery-tree tagme-scenery-tree--2">🌲</div>
+      <div class="tagme-scenery-tree tagme-scenery-tree--3">🌴</div>
+      <div class="tagme-scenery-bush tagme-scenery-bush--1">🌿</div>
+      <div class="tagme-scenery-bush tagme-scenery-bush--2">🍃</div>
+      <div class="tagme-scenery-rock">🪨</div>
+      <div class="tagme-scenery-flower tagme-scenery-flower--1">🌸</div>
+      <div class="tagme-scenery-flower tagme-scenery-flower--2">🌺</div>
+      <div class="tagme-scenery-mushroom">🍄</div>
+      <div class="tagme-scenery-footprints">👣 👣 👣</div>
+      <div class="tagme-scenery-hunt">${huntEmoji}</div>
+      <div class="tagme-scenery-banner tagme-scenery-banner--start">START</div>
+      <div class="tagme-scenery-banner tagme-scenery-banner--finish">FINISH 🏁</div>
+    </div>`;
+}
+
+function buildTagMePassesHudHtml(td) {
+  const used = td.passesUsed || 0;
+  const remaining = Math.max(0, BOARD_MAX_PASSES - used);
+  const tickets = Array.from({ length: BOARD_MAX_PASSES }, (_, i) => {
+    const spent = i < used;
+    return `<span class="tagme-pass-ticket${spent ? ' tagme-pass-ticket--spent' : ''}" aria-hidden="true">
+      <span class="tagme-pass-ticket-notch tagme-pass-ticket-notch--left"></span>
+      <span class="tagme-pass-ticket-body">🎟️</span>
+      <span class="tagme-pass-ticket-notch tagme-pass-ticket-notch--right"></span>
+    </span>`;
+  }).join('');
+  return `
+    <div class="tagme-passes-hud" aria-label="${remaining} of ${BOARD_MAX_PASSES} passes left">
+      <span class="tagme-passes-label">Passes</span>
+      <div class="tagme-passes-tickets">${tickets}</div>
+    </div>`;
+}
+
+function buildTagMePositionHudHtml(td, piece, chaser) {
+  return `
+    <div class="tagme-top-hud">
+      <div class="tagme-pos-hud" aria-live="polite">
+        <div class="tagme-pos-card tagme-pos-card--you">
+          <span class="tagme-pos-card-emoji" style="background:${piece?.bg || '#2dd4bf'}">${piece?.emoji || '🏃'}</span>
+          <div class="tagme-pos-card-text">
+            <span class="tagme-pos-card-label">You</span>
+            <span class="tagme-pos-card-num" id="tagMeHudPlayerPos">${td.position + 1}</span>
+          </div>
+        </div>
+        <div class="tagme-pos-card tagme-pos-card--gap" aria-hidden="true">
+          <span class="tagme-pos-gap-label">gap</span>
+          <span class="tagme-pos-gap-num" id="tagMeHudGap">${Math.max(0, td.position - td.chaserPosition)}</span>
+        </div>
+        <div class="tagme-pos-card tagme-pos-card--chaser">
+          <span class="tagme-pos-card-emoji" style="background:${chaser?.bg || '#f43f5e'}">${chaser?.emoji || '👣'}</span>
+          <div class="tagme-pos-card-text">
+            <span class="tagme-pos-card-label">${chaser?.name || 'Chaser'}</span>
+            <span class="tagme-pos-card-num" id="tagMeHudChaserPos">${td.chaserPosition + 1}</span>
+          </div>
+        </div>
+      </div>
+      <div class="tagme-top-hud-divider" aria-hidden="true"></div>
+      ${buildTagMePassesHudHtml(td)}
+    </div>`;
+}
+
+function clearTagMeOverlays() {
+  removeBoardGamePrompt();
+  removeBoardPassQuitOverlay();
+  document.getElementById('tagMeChaseOverlay')?.remove();
+  document.getElementById('tagMeGameOverOverlay')?.remove();
+}
+
+window.backToProfileFromTagMe = () => {
+  sfxClick();
+  clearTagMeOverlays();
+  state.view = 'profile';
+  state.boardRolling = false;
+  render();
+};
+
+function buildTagMeDiceCubeHtml(face = 1, cubeId = 'tagMeDiceCube') {
+  const pip = (n) => Array.from({ length: n }, () => '<span class="pip"></span>').join('');
+  const sides = [
+    [1, pip(1)], [2, pip(2)], [3, pip(3)], [4, pip(4)], [5, pip(5)], [6, pip(6)],
+  ].map(([n, pips]) =>
+    `<div class="profile-board-dice-side profile-board-dice-side--${n}">${pips}</div>`
+  ).join('');
+  return `<div class="profile-board-dice-scene"><div class="profile-board-dice-cube" id="${cubeId}" data-face="${face}">${sides}</div></div>`;
+}
+
+function setTagMeDiceFace(value, cubeId = 'tagMeDiceCube') {
+  const cube = document.getElementById(cubeId);
+  if (!cube) return;
+  if (value === 'rolling') {
+    cube.classList.add('profile-board-dice-cube--rolling');
+    return;
+  }
+  cube.classList.remove('profile-board-dice-cube--rolling');
+  const n = Math.max(1, Math.min(6, parseInt(value, 10) || 1));
+  cube.setAttribute('data-face', String(n));
+}
+
+function flickTagMeDiceFace(cubeId = 'tagMeDiceCube') {
+  const cube = document.getElementById(cubeId);
+  if (cube) cube.setAttribute('data-face', String(1 + Math.floor(Math.random() * 6)));
+}
+
+function getTagMeModifier(index) {
+  if (index <= 0 || index >= BOARD_FINISH_INDEX || isBoardBonusSquare(index)) return 0;
+  if (TAG_MODIFIER_BACK2.has(index)) return -2;
+  if (TAG_MODIFIER_BACK1.has(index)) return -1;
+  if (TAG_MODIFIER_FWD2.has(index)) return 2;
+  if (TAG_MODIFIER_FWD1.has(index)) return 1;
+  return 0;
+}
+
+function tagMeClearPathGlow(posIdx) {
+  if (posIdx == null || posIdx < 0) return;
+  const sq = document.querySelector(`[data-tag-square="${posIdx}"]`);
+  if (!sq) return;
+  sq.classList.remove('tagme-board-space--path-glow');
+  const tile = sq.querySelector('.tagme-board-space-tile');
+  tile?.style.removeProperty('--path-glow-ring');
+  tile?.style.removeProperty('--path-glow-shadow');
+}
+
+function tagMeSetPathGlow(posIdx, colorIndex) {
+  const sq = document.querySelector(`[data-tag-square="${posIdx}"]`);
+  if (!sq) return;
+  const tile = sq.querySelector('.tagme-board-space-tile');
+  const colors = TAG_ME_PATH_GLOW_COLORS[colorIndex % TAG_ME_PATH_GLOW_COLORS.length];
+  if (tile && colors) {
+    tile.style.setProperty('--path-glow-ring', colors[0]);
+    tile.style.setProperty('--path-glow-shadow', colors[1]);
+  }
+  sq.classList.add('tagme-board-space--path-glow');
+}
+
+function formatTagMeTileLabel(index, mod) {
+  const num = index + 1;
+  if (!mod) {
+    return { html: escapeHtmlText(String(num)), modBadge: '' };
+  }
+  const modText = mod > 0 ? `+${mod}` : String(mod);
+  const modCls = mod > 0 ? 'tagme-board-space-mod-outside--plus' : 'tagme-board-space-mod-outside--minus';
+  return {
+    html: escapeHtmlText(String(num)),
+    modBadge: `<span class="tagme-board-space-mod-outside ${modCls}">${escapeHtmlText(modText)}</span>`,
+  };
+}
+
+async function animateTagMeTokenMove(tokenId, fromPos, toPos, onStep) {
+  if (fromPos === toPos) return;
+  const positions = getTagMeBoardLayout().positions;
+  const token = document.getElementById(tokenId);
+  const stepDir = toPos > fromPos ? 1 : -1;
+  const steps = Math.abs(toPos - fromPos);
+  let lastGlow = fromPos;
+  for (let step = 1; step <= steps; step++) {
+    const posIdx = fromPos + step * stepDir;
+    const pos = positions[posIdx];
+    tagMeClearPathGlow(lastGlow);
+    if (token && pos) {
+      token.classList.remove('tagme-board-token--hop');
+      void token.offsetWidth;
+      token.classList.add('tagme-board-token--hop');
+      token.style.left = pos.x + '%';
+      token.style.top = pos.y + '%';
+    }
+    tagMeSetPathGlow(posIdx, step - 1);
+    lastGlow = posIdx;
+    if (onStep) onStep(posIdx);
+    scrollTagMeBoardToSquare(posIdx);
+    await new Promise(r => setTimeout(r, 340));
+  }
+  tagMeClearPathGlow(lastGlow);
+}
+
+async function applyTagMeModifierIfAny(name, td, who, landingPos) {
+  const mod = getTagMeModifier(landingPos);
+  if (!mod) return landingPos;
+
+  const isPlayer = who === 'player';
+  const posKey = isPlayer ? 'position' : 'chaserPosition';
+  const tokenId = isPlayer ? 'tagPlayerToken' : 'tagChaserToken';
+  const newPos = Math.max(0, Math.min(BOARD_FINISH_INDEX, landingPos + mod));
+  if (newPos === landingPos) return landingPos;
+
+  const chaser = TAG_CHASERS[td.chaserIndex];
+  const whoLabel = isPlayer ? 'You' : (chaser?.name || 'Chaser');
+  const msgEl = document.getElementById('tagMeMsg');
+  const sq = document.querySelector(`[data-tag-square="${landingPos}"]`);
+  if (sq) {
+    sq.classList.add(mod > 0 ? 'tagme-board-space--modifier-boost' : 'tagme-board-space--modifier-slip');
+  }
+  if (msgEl) {
+    msgEl.textContent = mod > 0
+      ? `${whoLabel} hit a boost! +${mod} square${mod === 1 ? '' : 's'}`
+      : `${whoLabel} hit a slip! ${mod} square${mod === -1 ? '' : 's'}`;
+    msgEl.classList.add('visible');
+  }
+  await new Promise(r => setTimeout(r, 450));
+
+  await animateTagMeTokenMove(tokenId, landingPos, newPos, (posIdx) => {
+    if (isPlayer) {
+      updateTagMePositionHud(posIdx, td.chaserPosition);
+      updateTagMeTokenBadges(posIdx, td.chaserPosition);
+      updateTagMeGapHud(posIdx, td.chaserPosition);
+    } else {
+      updateTagMePositionHud(td.position, posIdx);
+      updateTagMeTokenBadges(td.position, posIdx);
+      updateTagMeGapHud(td.position, posIdx);
+    }
+  });
+
+  if (sq) sq.classList.remove('tagme-board-space--modifier-boost', 'tagme-board-space--modifier-slip');
+  td[posKey] = newPos;
+  saveTagMeState(name, td);
+  return newPos;
+}
+
+function buildTagMeSpacesHtml(name, td, positions, pieceSelected) {
+  return positions.map((pos, i) => {
+    const bonusId = getBoardBonusArcadeId(i, td);
+    const gameId = getBoardSpaceGameId(i, td);
+    const disabled = gameId && !isBoardGameAvailable(name, gameId);
+    const played = gameId && td.playedGames.includes(gameId);
+    const currentPlayer = pieceSelected && td.position === i;
+    const currentChaser = pieceSelected && td.chaseActive && td.chaserPosition === i;
+    const mod = getTagMeModifier(i);
+    const label = formatTagMeTileLabel(i, mod);
+    let style = TAG_ME_NEUTRAL_TILE;
+    let title = `Square ${i + 1}`;
+    if (mod) {
+      style = TAG_MODIFIER_STYLE[String(mod)];
+      title = `Square ${i + 1}, ${mod > 0 ? `+${mod}` : mod}`;
+    }
+    let cls = 'tagme-board-space';
+    if (mod) cls += mod > 0 ? ' tagme-board-space--boost' : ' tagme-board-space--slip';
+    if (disabled) cls += ' tagme-board-space--disabled';
+    if (played) cls += ' tagme-board-space--played';
+    if (currentPlayer) cls += ' tagme-board-space--current';
+    if (currentChaser) cls += ' tagme-board-space--chaser-here';
+    return `<div class="${cls}" data-tag-square="${i}"
+      style="left:${pos.x}%;top:${pos.y}%;width:${pos.w}%;height:${pos.h}%;--tile-bg:${style.bg};--tile-fg:${style.text};--tile-border:${style.border};"
+      title="${title}" aria-label="${title}">
+      <div class="tagme-board-space-spotlight" aria-hidden="true"></div>
+      <div class="tagme-board-space-tile">
+        <span class="tagme-board-space-label">${label.html}</span>
+      </div>
+      ${label.modBadge}
+    </div>`;
+  }).join('');
+}
+
+function buildTagMeLegendHtml() {
+  const rows = BOARD_GAME_SEQUENCE.map(id => {
+    const st = BOARD_GAME_STYLE[id];
+    return `<div class="tagme-board-legend-row">
+      <span class="tagme-board-legend-swatch" style="background:${st.bg};border-color:${st.border};"></span>
+      <span class="tagme-board-legend-name">${GAME_BOARD_TITLES[id]}</span>
+    </div>`;
+  }).join('');
+  return `<div class="tagme-board-legend">
+    <div class="tagme-board-legend-row">
+      <span class="tagme-board-legend-swatch" style="background:${BOARD_START_STYLE.bg};border-color:${BOARD_START_STYLE.border};"></span>
+      <span class="tagme-board-legend-name">Start 🚩</span>
+    </div>
+    ${rows}
+    <div class="tagme-board-legend-row">
+      <span class="tagme-board-legend-swatch" style="background:${BOARD_BONUS_STYLE.bg};border-color:${BOARD_BONUS_STYLE.border};"></span>
+      <span class="tagme-board-legend-name">Starcade bonus 🎮</span>
+    </div>
+    <div class="tagme-board-legend-row">
+      <span class="tagme-board-legend-swatch" style="background:${BOARD_FINISH_STYLE.bg};border-color:${BOARD_FINISH_STYLE.border};"></span>
+      <span class="tagme-board-legend-name">Finish 🏁</span>
+    </div>
+  </div>`;
+}
+
+function showTagMeGamePrompt(gameId, squareIndex) {
+  removeBoardGamePrompt();
+  const st = BOARD_GAME_STYLE[gameId] || { bg: '#64748b', text: '#fff', border: '#cbd5e1' };
+  const title = GAME_BOARD_TITLES[gameId] || gameId;
+  const overlay = document.createElement('div');
+  overlay.id = 'boardGamePromptOverlay';
+  overlay.className = 'profile-board-piece-overlay fadeIn';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', title);
+  overlay.innerHTML = `
+    <div class="board-game-prompt-panel">
+      <div class="board-game-prompt-card tagme-game-prompt-card" style="background:${st.bg};color:${st.text};border-color:${st.border}">
+        <h2 class="board-game-prompt-title">${escapeHtmlText(title)}</h2>
+      </div>
+      <p class="board-game-prompt-hint">Press Go when ready!</p>
+      <button type="button" class="board-game-prompt-go tagme-game-prompt-go" id="boardGamePromptGo">Go!</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#boardGamePromptGo').addEventListener('click', () => {
+    sfxClick();
+    removeBoardGamePrompt();
+    const diceBtn = document.getElementById('tagMeDiceBtn');
+    if (diceBtn) diceBtn.disabled = true;
+    const name = state.selectedStudent;
+    const td = getTagMeState(name);
+    td.awaitingTurnComplete = true;
+    saveTagMeState(name, td);
+    startGame(gameId, { fromBoard: true, fromTagMe: true, boardSquare: squareIndex, boardPlayer: 1 });
+  });
+}
+
+function showTagMeBonusPrompt(arcadeId, squareIndex) {
+  removeBoardGamePrompt();
+  const title = BOARD_BONUS_GAME_TITLES[arcadeId] || 'Starcade game';
+  const st = BOARD_BONUS_STYLE;
+  const overlay = document.createElement('div');
+  overlay.id = 'boardGamePromptOverlay';
+  overlay.className = 'profile-board-piece-overlay fadeIn';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', title);
+  overlay.innerHTML = `
+    <div class="board-game-prompt-panel">
+      <div class="board-game-prompt-card tagme-game-prompt-card" style="background:${st.bg};color:${st.text};border-color:${st.border}">
+        <h2 class="board-game-prompt-title">🎮 ${escapeHtmlText(title)}</h2>
+        <p class="text-sm mt-1 opacity-90">Free Starcade bonus!</p>
+      </div>
+      <p class="board-game-prompt-hint">Press Go when ready!</p>
+      <button type="button" class="board-game-prompt-go tagme-game-prompt-go" id="boardBonusPromptGo">Go!</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#boardBonusPromptGo').addEventListener('click', () => {
+    sfxClick();
+    removeBoardGamePrompt();
+    const name = state.selectedStudent;
+    const td = getTagMeState(name);
+    td.awaitingTurnComplete = true;
+    saveTagMeState(name, td);
+    launchArcadeFromBoard(arcadeId);
+  });
+}
+
+function showTagMeReturnOkPrompt() {
+  document.getElementById('boardReturnOkOverlay')?.remove();
+  state.arcadeFromBoard = false;
+  state.arcadeGame = null;
+  state.view = 'tagme';
+  const overlay = document.createElement('div');
+  overlay.id = 'boardReturnOkOverlay';
+  overlay.className = 'profile-board-piece-overlay fadeIn';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.innerHTML = `
+    <div class="profile-board-piece-panel tagme-piece-panel">
+      <div class="game-end-board-celebrate mb-2" aria-hidden="true">🎉✨🌟</div>
+      <h2 class="arcade-title-friendly text-xl font-bold mb-1">Great game!</h2>
+      <p class="text-sm text-white/85 mb-3 arcade-instructions">Good try! Practice makes progress!</p>
+      <p class="board-game-prompt-hint mb-4">Press OK to return to the track</p>
+      <button type="button" class="board-game-prompt-go tagme-game-prompt-go" id="boardReturnOkBtn">OK</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#boardReturnOkBtn').addEventListener('click', () => {
+    sfxClick();
+    overlay.remove();
+    resumeTagMeAfterActivity();
+  });
+}
+
+window.resumeTagMeAfterActivity = async () => {
+  const name = state.selectedStudent;
+  const td = getTagMeState(name);
+  if (!td.awaitingTurnComplete) {
+    if (state.view === 'tagme') render();
+    return;
+  }
+  td.awaitingTurnComplete = false;
+  saveTagMeState(name, td);
+  if (state.view !== 'tagme') {
+    state.view = 'tagme';
+    render();
+  }
+  await completeTagMeUserTurn(name, td);
+};
+
+async function celebrateTagMeFinish(name) {
+  const bonus = boardPassesExhausted(name, true) ? 0 : TAG_FINISH_BONUS;
+  if (bonus > 0) addPoints(name, bonus);
+  resetBoardPasses(name, true);
+  for (let i = 0; i < 12; i++) setTimeout(() => confetti(), i * 160);
+  const overlay = document.createElement('div');
+  overlay.className = 'tagme-finish-overlay fadeIn';
+  const starsLine = bonus > 0
+    ? `<p class="tagme-finish-stars">+${bonus} Starcade stars!</p>`
+    : `<p class="tagme-finish-stars tagme-finish-stars--muted">You used all ${BOARD_MAX_PASSES} passes — no bonus stars this time.</p>`;
+  overlay.innerHTML = `
+    <div class="tagme-finish-panel">
+      <div class="tagme-finish-sparkles" aria-hidden="true">✨🎊✨</div>
+      <div class="tagme-finish-emoji tagme-finish-emoji--bounce">🏆🎉</div>
+      <p class="tagme-finish-title">You escaped!</p>
+      <p class="tagme-finish-sub">You reached the finish without being caught!</p>
+      ${starsLine}
+    </div>`;
+  document.body.appendChild(overlay);
+  await new Promise(r => setTimeout(r, 4200));
+  overlay.remove();
+  const td = getTagMeState(name);
+  td.position = 0;
+  td.chaserPosition = 0;
+  td.userTurnCount = 0;
+  td.chaseActive = false;
+  td.chaseIntroShown = false;
+  td.lastDiceRoll = null;
+  td.lastChaserRoll = null;
+  saveTagMeState(name, td);
+  if (state.view === 'tagme') render();
+}
+
+async function showTagMeHeadStartPopup(chaser) {
+  const overlay = document.createElement('div');
+  overlay.id = 'tagMeHeadStartOverlay';
+  overlay.className = 'tagme-chase-banner-overlay fadeIn';
+  overlay.innerHTML = `
+    <div class="tagme-chase-banner tagme-chase-banner--headstart">
+      <span class="tagme-chase-banner-emoji tagme-chase-banner-emoji--wiggle">${chaser.emoji}</span>
+      <p class="tagme-chase-banner-name">${escapeHtmlText(chaser.name)}</p>
+      <p class="tagme-chase-banner-text">You get a head start, but I will get you!</p>
+    </div>`;
+  document.body.appendChild(overlay);
+  await new Promise(r => setTimeout(r, 2800));
+  overlay.remove();
+}
+
+async function showTagMeCatchFlash(squareIndex) {
+  const sq = document.querySelector(`[data-tag-square="${squareIndex}"]`);
+  if (!sq) {
+    await new Promise(r => setTimeout(r, 700));
+    return;
+  }
+  sq.classList.add('tagme-board-space--caught-burst');
+  const burst = document.createElement('div');
+  burst.className = 'tagme-catch-explosion';
+  burst.setAttribute('aria-hidden', 'true');
+  burst.innerHTML = '<span class="tagme-catch-explosion-ring"></span><span class="tagme-catch-explosion-icon">💥</span>';
+  sq.appendChild(burst);
+  const chaserToken = document.getElementById('tagChaserToken');
+  if (chaserToken) chaserToken.classList.add('tagme-board-token--caught');
+  await new Promise(r => setTimeout(r, 950));
+  burst.remove();
+  sq.classList.remove('tagme-board-space--caught-burst');
+  if (chaserToken) chaserToken.classList.remove('tagme-board-token--caught');
+}
+
+async function showTagMeCaught(name, chaser) {
+  const catchLine = chaser.catchLine || 'Got you!';
+  const overlay = document.createElement('div');
+  overlay.id = 'tagMeChaseOverlay';
+  overlay.className = 'tagme-chase-banner-overlay fadeIn';
+  overlay.innerHTML = `
+    <div class="tagme-chase-banner tagme-chase-banner--caught">
+      <span class="tagme-chase-banner-emoji">${chaser.emoji}</span>
+      <p class="tagme-chase-banner-text">${escapeHtmlText(catchLine)}</p>
+    </div>`;
+  document.body.appendChild(overlay);
+  await new Promise(r => setTimeout(r, 2200));
+  overlay.remove();
+
+  const gameOver = document.createElement('div');
+  gameOver.id = 'tagMeGameOverOverlay';
+  gameOver.className = 'tagme-gameover-overlay fadeIn';
+  gameOver.setAttribute('role', 'dialog');
+  gameOver.setAttribute('aria-modal', 'true');
+  gameOver.innerHTML = `
+    <div class="tagme-gameover-panel">
+      <div class="tagme-gameover-chaser" style="background:${chaser.bg}">${chaser.emoji}</div>
+      <p class="tagme-gameover-title">The ${escapeHtmlText(chaser.name)} caught you!</p>
+      <p class="tagme-gameover-sub">${escapeHtmlText(catchLine)}</p>
+      <div class="tagme-gameover-btns">
+        <button type="button" class="tagme-gameover-btn tagme-gameover-btn--retry" id="tagMeRetryBtn">Try again</button>
+        <button type="button" class="tagme-gameover-btn tagme-gameover-btn--quit" id="tagMeQuitBtn">My page</button>
+      </div>
+    </div>`;
+  document.body.appendChild(gameOver);
+  await new Promise(resolve => {
+    gameOver.querySelector('#tagMeRetryBtn').addEventListener('click', () => {
+      sfxClick();
+      gameOver.remove();
+      restartTagMeBoard();
+      resolve();
+    });
+    gameOver.querySelector('#tagMeQuitBtn').addEventListener('click', () => {
+      sfxClick();
+      gameOver.remove();
+      backToProfileFromTagMe();
+      resolve();
+    });
+  });
+}
+
+async function runTagMeChasePhase(name, td) {
+  const chaser = TAG_CHASERS[td.chaserIndex];
+  if (!chaser) return false;
+
+  td.chaserTurnActive = true;
+  saveTagMeState(name, td);
+  if (state.view === 'tagme') render();
+
+  try {
+  if (!td.chaseIntroShown) {
+    const banner = document.createElement('div');
+    banner.id = 'tagMeChaseOverlay';
+    banner.className = 'tagme-chase-banner-overlay fadeIn';
+    banner.innerHTML = `
+      <div class="tagme-chase-banner">
+        <span class="tagme-chase-banner-emoji tagme-chase-banner-emoji--wiggle">${chaser.emoji}</span>
+        <p class="tagme-chase-banner-text">Ready or not, here I come!</p>
+      </div>`;
+    document.body.appendChild(banner);
+    await new Promise(r => setTimeout(r, 2400));
+    banner.remove();
+    td.chaseIntroShown = true;
+    saveTagMeState(name, td);
+  }
+
+  await new Promise(r => setTimeout(r, 1000));
+
+  const msgEl = document.getElementById('tagMeMsg');
+  const chaserDiceWrap = document.getElementById('tagMeChaserDiceWrap');
+  if (chaserDiceWrap) chaserDiceWrap.classList.add('tagme-chaser-dice-wrap--active');
+
+  setTagMeDiceFace('rolling', 'tagMeChaserDiceCube');
+  for (let i = 0; i < 14; i++) {
+    flickTagMeDiceFace('tagMeChaserDiceCube');
+    await new Promise(r => setTimeout(r, 55 + i * 6));
+  }
+  const roll = 1 + Math.floor(Math.random() * 6);
+  setTagMeDiceFace(roll, 'tagMeChaserDiceCube');
+  td.lastChaserRoll = roll;
+  saveTagMeState(name, td);
+  if (chaserDiceWrap) chaserDiceWrap.classList.remove('tagme-chaser-dice-wrap--active');
+
+  if (msgEl) {
+    msgEl.textContent = `${chaser.name} rolls ${roll}!`;
+    msgEl.classList.add('visible');
+  }
+  await new Promise(r => setTimeout(r, 700));
+
+  const currentChaserPos = td.chaserPosition;
+  const playerPos = td.position;
+  let endPos = Math.min(currentChaserPos + roll, BOARD_FINISH_INDEX, playerPos);
+
+  await animateTagMeTokenMove('tagChaserToken', currentChaserPos, endPos, (posIdx) => {
+    updateTagMePositionHud(playerPos, posIdx);
+    updateTagMeTokenBadges(playerPos, posIdx);
+    updateTagMeGapHud(playerPos, posIdx);
+  });
+
+  td.chaserPosition = endPos;
+  saveTagMeState(name, td);
+  updateTagMePositionHud(playerPos, endPos);
+  updateTagMeTokenBadges(playerPos, endPos);
+  updateTagMeGapHud(playerPos, endPos);
+
+  let caught = endPos >= playerPos;
+
+  if (!caught) {
+    endPos = await applyTagMeModifierIfAny(name, td, 'chaser', endPos);
+    td.chaserPosition = endPos;
+    saveTagMeState(name, td);
+    updateTagMePositionHud(playerPos, endPos);
+    updateTagMeTokenBadges(playerPos, endPos);
+    updateTagMeGapHud(playerPos, endPos);
+    if (endPos >= playerPos) {
+      td.chaserPosition = playerPos;
+      saveTagMeState(name, td);
+      caught = true;
+    }
+  }
+
+  if (caught) {
+    td.chaserPosition = playerPos;
+    saveTagMeState(name, td);
+    if (msgEl) { msgEl.textContent = ''; msgEl.classList.remove('visible'); }
+    await showTagMeCatchFlash(playerPos);
+    await showTagMeCaught(name, chaser);
+    return true;
+  }
+
+  if (msgEl) {
+    msgEl.textContent = `${chaser.name} is on square ${endPos + 1}. Keep going!`;
+    msgEl.classList.add('visible');
+  }
+  return false;
+  } finally {
+    td.chaserTurnActive = false;
+    saveTagMeState(name, td);
+  }
+}
+
+async function completeTagMeUserTurn(name, td) {
+  td.userTurnCount += 1;
+  if (td.userTurnCount >= TAG_FREE_ROLLS) td.chaseActive = true;
+  saveTagMeState(name, td);
+
+  if (td.chaseActive) {
+    if (state.view === 'tagme') {
+      render();
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    }
+    const caught = await runTagMeChasePhase(name, td);
+    if (caught) return;
+  }
+
+  const diceBtn = document.getElementById('tagMeDiceBtn');
+  if (diceBtn) diceBtn.disabled = false;
+  if (state.view === 'tagme') render();
+}
+
+async function handleTagMeLanding(name, td, endPos, diceBtn) {
+  if (endPos >= BOARD_FINISH_INDEX) {
+    await celebrateTagMeFinish(name);
+    if (diceBtn) diceBtn.disabled = false;
+    return;
+  }
+
+  const bonusId = getBoardBonusArcadeId(endPos, td);
+  if (bonusId) {
+    showTagMeBonusPrompt(bonusId, endPos);
+    return;
+  }
+
+  const gameId = getBoardSpaceGameId(endPos, td);
+  if (gameId && isBoardGameAvailable(name, gameId)) {
+    showTagMeGamePrompt(gameId, endPos);
+    return;
+  }
+
+  const msgEl = document.getElementById('tagMeMsg');
+  if (msgEl && gameId) {
+    msgEl.textContent = `${GAME_BOARD_TITLES[gameId]} needs more targets. Roll again!`;
+    msgEl.classList.add('visible');
+  }
+  await completeTagMeUserTurn(name, td);
+}
+
+function renderTagMeMode(app) {
+  const name = state.selectedStudent;
+  const needs = getStudentNeeds(name);
+  const hasAnyPractice = hasAnyPracticePool(needs);
+  const td = getTagMeState(name);
+  const layout = computeTagMeBoardLayout();
+  const boardCols = layout.cols;
+  const { positions, connectors } = layout;
+  const pathD = buildTagMeSnakePath(positions);
+  const pickPhase = getTagMePickPhase(td);
+  const pieceSelected = pickPhase == null;
+  const tokenPos = positions[td.position] || positions[0];
+  const chaserPos = positions[td.chaserPosition] || positions[0];
+  const piece = td.pieceIndex != null ? BOARD_PIECES[td.pieceIndex] : null;
+  const chaser = td.chaserIndex != null ? TAG_CHASERS[td.chaserIndex] : null;
+  const spacesHtml = buildTagMeSpacesHtml(name, td, positions, pieceSelected);
+  const connectorsHtml = buildBoardConnectorsHtml(connectors).replace(/profile-board-connector/g, 'tagme-board-connector');
+  const manualListHtml = td.playedGames.length
+    ? td.playedGames.map(id => {
+        const st = BOARD_GAME_STYLE[id];
+        return `<li><button type="button" onclick="launchManualTagMeGame('${id}')"><span class="tagme-board-legend-swatch inline-block align-middle mr-1" style="background:${st?.bg || '#64748b'}"></span>${GAME_BOARD_TITLES[id] || id}</button></li>`;
+      }).join('')
+    : `<li class="tagme-board-manual-empty">Roll the dice and play games to unlock replay here.</li>`;
+
+  const rollsLeft = Math.max(0, TAG_FREE_ROLLS - td.userTurnCount);
+  const chaseStatus = !td.chaseActive
+    ? (rollsLeft > 0 ? `<span class="tagme-chase-status tagme-chase-status--safe">🛡️ ${rollsLeft} safe roll${rollsLeft === 1 ? '' : 's'} left</span>` : '')
+    : `<span class="tagme-chase-status tagme-chase-status--active">⚡ ${chaser?.emoji || ''} ${chaser?.name || 'Chaser'} is chasing!</span>`;
+
+  let pieceOverlay = '';
+  if (pickPhase === 'piece') {
+    const pieceBtns = BOARD_PIECES.map((p, i) =>
+      `<button type="button" class="tagme-board-piece-btn" style="background:${p.bg}" data-tag-piece="${i}" aria-label="Piece ${i + 1}">${p.emoji}</button>`
+    ).join('');
+    pieceOverlay = `
+      <div class="profile-board-piece-overlay fadeIn" role="dialog" aria-modal="true" aria-label="Choose your token">
+        <div class="profile-board-piece-panel tagme-piece-panel">
+          <h2 class="text-xl font-bold mb-1">Pick your runner!</h2>
+          <p class="text-sm text-white/70 mb-2">Choose a token to race along the track.</p>
+          <div class="tagme-board-piece-grid">${pieceBtns}</div>
+        </div>
+      </div>`;
+  } else if (pickPhase === 'chaser') {
+    const chaserBtns = TAG_CHASERS.map((c, i) =>
+      `<button type="button" class="tagme-chaser-btn" style="background:${c.bg}" data-tag-chaser="${i}" aria-label="${c.name}">${c.emoji}<span>${c.name}</span></button>`
+    ).join('');
+    pieceOverlay = `
+      <div class="profile-board-piece-overlay fadeIn" role="dialog" aria-modal="true" aria-label="Choose your chaser">
+        <div class="profile-board-piece-panel tagme-piece-panel">
+          <h2 class="text-xl font-bold mb-1">Who is chasing you?</h2>
+          <p class="text-sm text-white/70 mb-2">Pick the chaser — they will hunt you after your first ${TAG_FREE_ROLLS} rolls!</p>
+          <div class="tagme-chaser-grid">${chaserBtns}</div>
+        </div>
+      </div>`;
+  }
+
+  const diceDisabled = !pieceSelected || state.boardRolling || !hasAnyPractice || td.awaitingTurnComplete || td.chaserTurnActive;
+  const sceneryHtml = buildTagMeSceneryHtml(chaser);
+  const posHudHtml = pieceSelected ? buildTagMePositionHudHtml(td, piece, chaser) : '';
+  const layoutModeClass = isTagMeLandscapeMode() ? ' tagme-landscape' : ' tagme-portrait';
+
+  app.innerHTML = `
+    <div class="profile-fs profile-fs--tagme student-friendly fadeIn${layoutModeClass}">
+      <header class="profile-fs-topbar tagme-topbar">
+        <button type="button" class="profile-fs-back tagme-back" onclick="backToProfileFromTagMe()">← Menu</button>
+        <div class="profile-fs-greeting tagme-greeting">🏃 Tag me!</div>
+        <div class="profile-fs-stars tagme-stars" aria-label="Stars">⭐ ${getPoints(name)}</div>
+      </header>
+      <div class="profile-fs-body tagme-body">
+        <div class="profile-fs-board-area tagme-board-area">
+          ${posHudHtml}
+          <div id="tagMeBoardViewport" class="tagme-board-viewport">
+            <div id="tagMeBoardArena" class="tagme-board-arena" aria-label="Tag me chase track">
+              <div class="tagme-board-frame">
+                ${sceneryHtml}
+                <div class="tagme-board-surface">
+                  <div class="tagme-board-surface-vignette" aria-hidden="true"></div>
+                  <svg class="tagme-board-path-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <path class="tagme-board-path--shadow" d="${pathD}"/>
+                    <path class="tagme-board-path--glow" d="${pathD}"/>
+                    <path class="tagme-board-path--trail" d="${pathD}"/>
+                  </svg>
+                  ${connectorsHtml}
+                  ${spacesHtml}
+                  ${piece ? `<div id="tagPlayerToken" class="tagme-board-token tagme-board-token--player" style="left:${tokenPos.x}%;top:${tokenPos.y}%;background:${piece.bg}">${piece.emoji}<span class="tagme-token-badge" id="tagMePlayerBadge">${td.position + 1}</span></div>` : ''}
+                  ${chaser && pieceSelected ? `<div id="tagChaserToken" class="tagme-board-token tagme-board-token--chaser${td.chaseActive ? ' tagme-board-token--chaser-active' : ''}" style="left:${chaserPos.x}%;top:${chaserPos.y}%;background:${chaser.bg}">${chaser.emoji}<span class="tagme-token-badge tagme-token-badge--chaser" id="tagMeChaserBadge">${td.chaserPosition + 1}</span></div>` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="profile-fs-panel tagme-panel" aria-label="Game controls">
+          <div class="tagme-panel-row">
+            <div class="profile-fs-panel-section tagme-panel-section tagme-panel-section--chaser">
+              <div class="profile-fs-panel-label">Chaser</div>
+              ${chaser ? `<div class="tagme-chaser-card" style="border-color:${chaser.bg}">
+                <span class="tagme-chaser-card-emoji" style="background:${chaser.bg}">${chaser.emoji}</span>
+                <span class="tagme-chaser-card-name">${chaser.name}</span>
+              </div>` : '<p class="tagme-chaser-pick-hint">Pick a chaser to start</p>'}
+              ${chaseStatus}
+              ${chaser ? `
+              <div id="tagMeChaserDiceWrap" class="tagme-chaser-dice-wrap${td.chaseActive ? '' : ' tagme-chaser-dice-wrap--hidden'}" aria-label="${chaser.name} dice">
+                <span class="tagme-chaser-dice-label">${chaser.emoji} Roll</span>
+                ${buildTagMeDiceCubeHtml(td.lastChaserRoll || 1, 'tagMeChaserDiceCube')}
+              </div>` : ''}
+            </div>
+            <div class="profile-fs-panel-section tagme-panel-section tagme-panel-section--roll">
+              <div class="profile-fs-panel-label">Roll</div>
+              <button type="button" id="tagMeDiceBtn" class="tagme-board-dice" onclick="rollTagMeDice()" ${diceDisabled ? 'disabled' : ''} aria-label="Roll dice">
+                ${buildTagMeDiceCubeHtml(td.lastDiceRoll || 1)}
+                <span>Roll dice</span>
+              </button>
+              <p id="tagMeMsg" class="tagme-board-msg" role="status"></p>
+            </div>
+            <div class="tagme-panel-actions">
+              <button type="button" class="profile-fs-panel-btn tagme-panel-btn${td.manualMode ? ' profile-fs-panel-btn--active' : ''}" onclick="toggleTagMeManualMode()" aria-pressed="${td.manualMode}">
+                <span class="profile-board-side-icon">📋</span>
+                <span>Manual</span>
+              </button>
+              <button type="button" class="tagme-board-restart-btn" onclick="restartTagMeBoard()">
+                <span class="profile-board-side-icon">↻</span>
+                <span>Restart</span>
+              </button>
+            </div>
+          </div>
+          ${td.manualMode ? `
+          <div class="profile-fs-panel-section tagme-panel-section tagme-panel-section--manual">
+            <div class="profile-fs-panel-label">Played games</div>
+            <ul class="tagme-board-manual-list">${manualListHtml}</ul>
+          </div>` : ''}
+        </aside>
+      </div>
+      ${pieceOverlay}
+    </div>`;
+
+  if (pickPhase === 'piece') {
+    document.querySelectorAll('[data-tag-piece]').forEach(el => {
+      el.addEventListener('click', () => selectTagMePiece(parseInt(el.dataset.tagPiece, 10)));
+    });
+  } else if (pickPhase === 'chaser') {
+    document.querySelectorAll('[data-tag-chaser]').forEach(el => {
+      el.addEventListener('click', () => selectTagMeChaser(parseInt(el.dataset.tagChaser, 10)));
+    });
+  }
+
+  if (pieceSelected) {
+    if (state._tagMeResizeHandler) window.removeEventListener('resize', state._tagMeResizeHandler);
+    state._tagMeResizeHandler = () => {
+      if (state.view !== 'tagme') return;
+      const cols = getTagMeBoardCols();
+      if (cols !== state._tagMeLastCols) {
+        state._tagMeLastCols = cols;
+        render();
+        return;
+      }
+      const root = document.querySelector('.profile-fs--tagme');
+      if (root) {
+        root.classList.toggle('tagme-landscape', isTagMeLandscapeMode());
+        root.classList.toggle('tagme-portrait', !isTagMeLandscapeMode());
+      }
+      fitTagMeBoardToViewport();
+    };
+    state._tagMeLastCols = boardCols;
+    window.addEventListener('resize', state._tagMeResizeHandler);
+    requestAnimationFrame(() => {
+      fitTagMeBoardToViewport();
+      scrollTagMeBoardToSquare(td.position);
+    });
+  }
+}
+
+window.selectTagMePiece = (index) => {
+  sfxClick();
+  const name = state.selectedStudent;
+  const td = getTagMeState(name);
+  td.pieceIndex = index;
+  saveTagMeState(name, td);
+  render();
+};
+
+window.selectTagMeChaser = async (index) => {
+  sfxClick();
+  const name = state.selectedStudent;
+  const td = getTagMeState(name);
+  td.chaserIndex = index;
+  td.chaserPosition = 0;
+  saveTagMeState(name, td);
+  render();
+  const chaser = TAG_CHASERS[index];
+  if (chaser) await showTagMeHeadStartPopup(chaser);
+};
+
+window.restartTagMeBoard = () => {
+  sfxClick();
+  const name = state.selectedStudent;
+  const td = getTagMeState(name);
+  td.pieceIndex = null;
+  td.chaserIndex = null;
+  td.position = 0;
+  td.chaserPosition = 0;
+  td.userTurnCount = 0;
+  td.chaseActive = false;
+  td.playedGames = [];
+  td.manualMode = false;
+  td.lastDiceRoll = null;
+  td.lastChaserRoll = null;
+  td.awaitingTurnComplete = false;
+  td.chaseIntroShown = false;
+  td.chaserTurnActive = false;
+  td.passesUsed = 0;
+  resetBoardTileShuffle(td);
+  saveTagMeState(name, td);
+  clearTagMeOverlays();
+  state.boardRolling = false;
+  render();
+};
+
+window.toggleTagMeManualMode = () => {
+  sfxClick();
+  const name = state.selectedStudent;
+  const td = getTagMeState(name);
+  td.manualMode = !td.manualMode;
+  saveTagMeState(name, td);
+  render();
+};
+
+window.launchManualTagMeGame = (gameId) => {
+  sfxClick();
+  if (!isBoardGameAvailable(state.selectedStudent, gameId)) {
+    alert('This game is not available with your current reading targets.');
+    return;
+  }
+  startGame(gameId, { fromBoard: true, fromTagMe: true, manual: true });
+};
+
+window.rollTagMeDice = async () => {
+  const name = state.selectedStudent;
+  const td = getTagMeState(name);
+  if (td.pieceIndex == null || td.chaserIndex == null || state.boardRolling || td.chaserTurnActive) return;
+  if (!hasAnyPracticePool(getStudentNeeds(name))) return;
+
+  const currentPos = td.position;
+  if (currentPos >= BOARD_FINISH_INDEX) {
+    td.position = 0;
+    saveTagMeState(name, td);
+    render();
+    return;
+  }
+
+  state.boardRolling = true;
+  sfxClick();
+  const roll = 1 + Math.floor(Math.random() * 6);
+  const diceBtn = document.getElementById('tagMeDiceBtn');
+  const msgEl = document.getElementById('tagMeMsg');
+  if (msgEl) { msgEl.textContent = ''; msgEl.classList.remove('visible'); }
+  if (diceBtn) diceBtn.disabled = true;
+  setTagMeDiceFace('rolling');
+
+  for (let i = 0; i < 14; i++) {
+    flickTagMeDiceFace();
+    await new Promise(r => setTimeout(r, 55 + i * 6));
+  }
+  setTagMeDiceFace(roll);
+  td.lastDiceRoll = roll;
+  saveTagMeState(name, td);
+
+  let endPos = Math.min(currentPos + roll, BOARD_FINISH_INDEX);
+
+  await animateTagMeTokenMove('tagPlayerToken', currentPos, endPos, (posIdx) => {
+    updateTagMePositionHud(posIdx, td.chaserPosition);
+    updateTagMeTokenBadges(posIdx, td.chaserPosition);
+    updateTagMeGapHud(posIdx, td.chaserPosition);
+  });
+
+  td.position = endPos;
+  saveTagMeState(name, td);
+  updateTagMePositionHud(endPos, td.chaserPosition);
+  updateTagMeTokenBadges(endPos, td.chaserPosition);
+  updateTagMeGapHud(endPos, td.chaserPosition);
+
+  endPos = await applyTagMeModifierIfAny(name, td, 'player', endPos);
+  td.position = endPos;
+  saveTagMeState(name, td);
+
+  if (endPos >= BOARD_FINISH_INDEX) {
+    await celebrateTagMeFinish(name);
+    if (diceBtn) diceBtn.disabled = false;
+    state.boardRolling = false;
+    return;
+  }
+
+  await handleTagMeLanding(name, td, endPos, diceBtn);
+  state.boardRolling = false;
+};
 
 window.logoutStudent = () => {
   state.view = 'dashboard';
@@ -3381,15 +6032,9 @@ function escapeHtmlText(s) {
 }
 
 function getProfileWordExampleHtml(word) {
-  const key = HW_BLANK_ALIASES[String(word).toLowerCase()] || String(word).toLowerCase();
-  const entry = LONG_VOWEL_WORD_INDEX[key];
-  let s = '';
-  if (entry?.sentences?.length) {
-    s = entry.sentences.find(line => /\*\*/.test(line) || /____/.test(line)) || entry.sentences[0];
-  }
-  if (!s && HW_SENTENCES[key]?.length) {
-    s = HW_SENTENCES[key][0].s;
-  }
+  const { lines } = collectHwBlankSentenceLines(word);
+  const key = getHwSentenceKey(word);
+  let s = lines[0] || '';
   if (!s) return '';
   let html = escapeHtmlText(s);
   html = html.replace(/\*\*([^*]+)\*\*/g, (_, w) => `<span class="word-focus-em">${escapeHtmlText(w)}</span>`);
@@ -3401,14 +6046,19 @@ window.openWordFocus = (word, kind) => {
   sfxClick();
   const w = String(word ?? '').trim();
   if (!w) return;
+  if (state.view === 'profileSoundsWords' || state.view === 'profileReadingGames' || state.view === 'profileWallOfFame') {
+    state.profileRestoreScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    state.wordFocusReturnView = state.view;
+  }
   state.wordFocus = { word: w, kind: kind || 'hw' };
   state.view = 'wordFocus';
   render();
 };
 
 window.closeWordFocus = () => {
-  state.view = 'profile';
+  state.view = state.wordFocusReturnView || 'profileSoundsWords';
   state.wordFocus = null;
+  state.wordFocusReturnView = null;
   render();
 };
 
@@ -3416,7 +6066,11 @@ function renderWordFocus(app) {
   const wf = state.wordFocus;
   const word = String(wf?.word ?? '').trim();
   if (!word) {
-    state.view = 'profile';
+    state.view = state.wordFocusReturnView || 'profileSoundsWords';
+    state.wordFocusReturnView = null;
+    if (state.view === 'profileSoundsWords') return renderProfileSoundsWords(app);
+    if (state.view === 'profileReadingGames') return renderProfileReadingGames(app);
+    if (state.view === 'profileWallOfFame') return renderProfileWallOfFame(app);
     return renderProfile(app);
   }
   const sentenceHtml = getProfileWordExampleHtml(word);
@@ -3459,7 +6113,7 @@ window.startGame = (g, boardOpts) => {
     render();
     return;
   }
-  state.game = { type: g, score: 0, attempts: 0, correct: 0, history: [], roundIdx: 0, totalRounds: CHALLENGE_ROUNDS, pointsAwarded: false, trackMarked: false, fromBoard: !!opts.fromBoard, boardManual: !!opts.manual, boardSquare: opts.boardSquare ?? null, boardPlayer: opts.boardPlayer || 1 };
+  state.game = { type: g, score: 0, attempts: 0, correct: 0, history: [], roundIdx: 0, totalRounds: CHALLENGE_ROUNDS, roundHadError: false, pointsAwarded: false, trackMarked: false, fromBoard: !!opts.fromBoard, fromTagMe: !!opts.fromTagMe, boardManual: !!opts.manual, boardSquare: opts.boardSquare ?? null, boardPlayer: opts.boardPlayer || 1, readingReturnView: opts.readingReturnView || (!opts.fromBoard && !opts.fromTagMe ? (state.view === 'profileSoundsWords' ? 'profileSoundsWords' : 'profileReadingGames') : null) };
   state.view = 'game';
   initGame();
   render();
@@ -3492,9 +6146,38 @@ window.beginFlashSet = (setIndex) => {
     cards,
     totalRounds: cards.length,
     flashSetRef: { kind: hub.kind, setIndex },
+    flashFlipped: false,
     pointsAwarded: false,
     trackMarked: false,
     fromBoard: !!hub.fromBoard,
+    startedAt: Date.now(),
+  };
+  state.view = 'game';
+  render();
+};
+
+window.beginFlashRandomSet = () => {
+  sfxClick();
+  const hub = state.flashHub;
+  if (!hub) return;
+  const pool = getFlashRandomPool(hub.needs, hub.kind);
+  if (pool.length === 0) return;
+  const cards = shuffle([...pool]).slice(0, Math.min(10, pool.length));
+  state.game = {
+    type: 'flash',
+    score: 0,
+    attempts: 0,
+    correct: 0,
+    history: [],
+    cardIdx: 0,
+    cards,
+    totalRounds: cards.length,
+    flashSetRef: { kind: hub.kind, random: true },
+    flashFlipped: false,
+    pointsAwarded: false,
+    trackMarked: false,
+    fromBoard: !!hub.fromBoard,
+    startedAt: Date.now(),
   };
   state.view = 'game';
   render();
@@ -3506,11 +6189,20 @@ function finishFlashSetAndReturn() {
   render();
 }
 
-function completeFlashSet() {
+async function completeFlashSet() {
   const g = state.game;
   const name = state.selectedStudent;
   if (g?.flashSetRef && name) {
-    markFlashSetAttempted(name, g.flashSetRef.kind, g.flashSetRef.setIndex);
+    const setKey = g.flashSetRef.random ? 'random' : g.flashSetRef.setIndex;
+    markFlashSetAttempted(name, g.flashSetRef.kind, setKey);
+  }
+  if (g?.finished && name) {
+    const elapsed = (Date.now() - (g.startedAt || Date.now())) / 1000;
+    if (elapsed >= FLASH_SET_MIN_SECONDS) {
+      addPoints(name, FLASH_SET_STAR_REWARD);
+    } else {
+      await showTakeYourTimePopup();
+    }
   }
   finishFlashSetAndReturn();
 }
@@ -3519,14 +6211,16 @@ function initGame(){
   const g = state.game;
   if (g.type === 'gpcMatch') {
     g.roundTargets = buildRoundTargets(needs, 'gpc', CHALLENGE_ROUNDS);
-    g.targetPool = uniqueValidTokens([...needs.targetGpcs.map(x => x.gpc), ...needs.masteredGpcs.map(x => x.gpc)]);
-    g.distractorPool = uniqueValidTokens(needs.masteredGpcs.map(x => x.gpc));
+    g.targetPool = uniqueValidTokens([...needs.targetGpcs.map(gpcPoolKey), ...needs.masteredGpcs.map(gpcPoolKey)], { caseSensitive: true });
+    g.distractorPool = uniqueValidTokens(needs.masteredGpcs.map(gpcPoolKey), { caseSensitive: true });
+    g.masteryStats = getCombinedMasteryStats(needs);
     g.totalRounds = CHALLENGE_ROUNDS;
     if (g.roundTargets.length === 0) g.empty = true;
   } else if (g.type === 'hwHunt') {
     g.roundTargets = buildRoundTargets(needs, 'hw', CHALLENGE_ROUNDS);
-    g.targetPool = uniqueValidTokens([...needs.targetHws.map(x => x.hw), ...needs.masteredHws.map(x => x.hw)]);
-    g.distractorPool = uniqueValidTokens(needs.masteredHws.map(x => x.hw));
+    g.targetPool = uniqueValidTokens([...needs.targetHws.map(x => x.hw), ...needs.masteredHws.map(x => x.hw)], { caseSensitive: true });
+    g.distractorPool = uniqueValidTokens(needs.masteredHws.map(x => x.hw), { caseSensitive: true });
+    g.masteryStats = getCombinedMasteryStats(needs);
     g.totalRounds = CHALLENGE_ROUNDS;
     if (g.roundTargets.length === 0) g.empty = true;
   } else if (g.type === 'flash') {
@@ -3545,6 +6239,9 @@ function initGame(){
   } else if (g.type === 'hwBlank') {
     initHwBlank(needs);
     return;
+  } else if (g.type === 'hwJumble') {
+    initHwJumble(needs);
+    return;
   } else if (g.type === 'hwBoxes') {
     initHwBoxes(needs);
     return;
@@ -3562,8 +6259,8 @@ function newRound(){
     : g.targetPool[g.roundIdx % g.targetPool.length];
   const kind = g.type === 'gpcMatch' ? 'gpc' : 'hw';
   g.currentTarget = String(target ?? '').trim();
-  g.currentOptions = buildChallengeOptions(g.currentTarget, g.distractorPool, g.targetPool, 3, kind);
-  if (!isValidGameToken(g.currentTarget) || g.currentOptions.length < 2) {
+  g.currentOptions = buildChallengeOptions(g.currentTarget, g.distractorPool, g.targetPool, 3, kind, g.masteryStats);
+  if (!isValidGameToken(gpcDisplayPhoneme(g.currentTarget)) || g.currentOptions.length < 2) {
     g.roundIdx++;
     if (g.roundIdx >= g.totalRounds) g.finished = true;
     else newRound();
@@ -3572,6 +6269,7 @@ function newRound(){
   g.currentExampleWord = kind === 'gpc' ? resolveGpcExampleWord(g.currentTarget) : '';
   g.currentHwContext = kind === 'hw' ? getHwContextSnippet(g.currentTarget) : '';
   g.feedback = null;
+  g.roundHadError = false;
   resetTargetAudioFlags(g);
 }
 function renderGame(app){
@@ -3582,7 +6280,7 @@ function renderGame(app){
         <div class="text-5xl mb-3">🎉</div>
         <h2 class="text-2xl font-bold mb-2">Nothing to practise!</h2>
         <p class="text-white/70 mb-4">You've mastered everything in this category.</p>
-        <button onclick="state.view='profile'; render()" class="bg-white/20 hover:bg-white/30 px-5 py-2 rounded-xl">Back</button>
+        <button onclick="state.view='${resolveProfileGameReturnView(g)}'; render()" class="bg-white/20 hover:bg-white/30 px-5 py-2 rounded-xl">Back</button>
       </div></div>`;
     return;
   }
@@ -3598,12 +6296,16 @@ function renderGame(app){
   if (g.type === 'soundFlip') return renderSoundFlip(app);
   if (g.type === 'soundBox') return renderSoundBox(app);
   if (g.type === 'hwBlank') return renderHwBlank(app);
+  if (g.type === 'hwJumble') return renderHwJumble(app);
   if (g.type === 'hwBoxes') return renderHwBoxes(app);
 }
 function renderSoundPlanets(app) {
   const g = state.game;
   const exampleWord = g.currentExampleWord || resolveGpcExampleWord(g.currentTarget);
-  const exampleHint = g.feedback ? '' : renderGpcExampleHint(exampleWord);
+  const exampleFlash = !!(g.feedback && !g.feedback.correct);
+  const exampleHint = g.feedback?.correct
+    ? ''
+    : renderGpcExampleHint(exampleWord, { flash: exampleFlash });
   const playHeader = renderGamePlayHeader({
     feedbackMessage: g.feedback?.message,
     feedbackCorrect: g.feedback?.correct,
@@ -3620,7 +6322,8 @@ function renderSoundPlanets(app) {
       else if (g.feedback.picked === opt) cls += ' ring-4 ring-red-400 opacity-50 shake';
       else cls += ' opacity-30';
     }
-    return `<button class="${cls}" data-option="${opt}">${opt}</button>`;
+    const optEsc = String(opt).replace(/"/g, '&quot;');
+    return `<button class="${cls}" data-option="${optEsc}">${formatGpcOptionLabel(opt, g.currentOptions)}</button>`;
   }).join('');
 
   app.innerHTML = `
@@ -3696,12 +6399,14 @@ window.pickOption = (opt, type) => {
   const retryRound = isChallengeRetryGame(gameKind);
   if (correct) {
     g.attempts++;
-    g.correct++;
+    if (!g.roundHadError) g.correct++;
     confetti();
     g.feedback = { picked: opt, correct: true, message: correctFeedback(g.currentTarget, type, gameKind) };
     playTargetOnCorrect(g, g.currentTarget);
-    g.history.push({ target: g.currentTarget, picked: opt, correct, type });
+    g.history.push({ target: g.currentTarget, picked: opt, correct: !g.roundHadError, type });
+    g.roundHadError = false;
   } else if (retryRound) {
+    g.roundHadError = true;
     g.feedback = { picked: opt, correct: false, message: challengeWrongFeedback(g.currentTarget, type, gameKind) };
   } else {
     g.attempts++;
@@ -3733,7 +6438,7 @@ function renderFlashKindPick(app) {
   app.innerHTML = `
     <div class="min-h-screen p-4 md:p-8 flex flex-col items-center justify-center">
       <div class="max-w-lg w-full bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-8 text-center fadeIn">
-        <button type="button" onclick="state.flashHub=null; state.view='profile'; render()" class="text-white/60 hover:text-white text-sm mb-4 block mx-auto">← Back</button>
+        <button type="button" onclick="state.flashHub=null; backToStudentMenu()" class="text-white/60 hover:text-white text-sm mb-4 block mx-auto">← Back</button>
         <h2 class="text-2xl font-bold mb-2 arcade-title-friendly">Self Check</h2>
         <p class="text-white/80 mb-6 text-sm leading-relaxed">What would you like to check?</p>
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
@@ -3765,6 +6470,13 @@ function renderFlashSetHub(app) {
       <div class="flash-set-card-title">Set ${idx + 1}</div>
     </button>`;
   }).join('');
+  const randomLabel = hub.kind === 'gpc' ? 'sounds' : 'words';
+  const randomBtn = areAllFlashSetsComplete(name, hub.kind, hub.sets)
+    ? `<button type="button" onclick="beginFlashRandomSet()" class="flash-set-card flash-set-card--random">
+        <div class="flash-set-card-title">Random Set</div>
+        <div class="text-xs text-white/70 mt-1">10 random ${randomLabel}</div>
+      </button>`
+    : '';
 
   app.innerHTML = `
     <div class="min-h-screen p-4 md:p-8">
@@ -3772,7 +6484,7 @@ function renderFlashSetHub(app) {
         <button type="button" onclick="state.view='flashKind'; render()" class="text-white/60 hover:text-white text-sm mb-4">← ${kindLabel}</button>
         <h2 class="text-2xl font-bold mb-1 arcade-title-friendly">Self Check — ${kindLabel}</h2>
         <p class="text-white/70 text-sm mb-5">Each set stays the same. Pick a set to check. Orange = started; green = all marked “I know it”.</p>
-        <div class="flash-set-grid">${cardsHtml}</div>
+        <div class="flash-set-grid">${cardsHtml}${randomBtn}</div>
       </div>
     </div>`;
 }
@@ -3785,14 +6497,30 @@ function renderFlashGame(app){
     return;
   }
   const card = g.cards[g.cardIdx];
-  const audioOk = hasAudio(card.value);
+  const flashTrack = card.type === 'hw' ? 'hw' : 'gpc';
+  const audioOk = hasAudio(card.value, flashTrack);
   const colorClass = card.type === 'gpc' ? 'from-cyan-400 to-blue-600' : 'from-pink-400 to-rose-600';
   const typeLabel = card.type === 'gpc' ? 'sound' : 'word';
+  const flipped = !!g.flashFlipped;
 
-  const flashContext = card.type === 'gpc'
-    ? renderGpcContextBar(resolveGpcExampleWord(card.value))
-    : renderHwContextBar(card.value);
+  const cardLabel = card.type === 'gpc' && card.item
+    ? String(card.item.gpc || gpcDisplayPhoneme(card.value)).trim()
+    : (card.type === 'gpc' ? gpcDisplayPhoneme(card.value) : card.value);
+  const flashContext = flipped
+    ? ''
+    : (card.type === 'hw' ? renderHwContextBar(card.value) : '');
   const playHeader = renderGamePlayHeader({ contextHtml: flashContext });
+
+  const cardFaceHtml = flipped
+    ? `<div class="flash-card-back"><span class="text-5xl md:text-6xl font-bold text-white/90">?</span><p class="mt-4 text-sm text-white/75 max-w-xs">Spell it aloud, then flip to check</p></div>`
+    : `<div class="text-7xl md:text-9xl font-bold">${escapeHtmlText(cardLabel)}</div>`;
+
+  const listenBtn = audioOk
+    ? `<button type="button" id="flashListenBtn" class="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold px-6 py-3 rounded-2xl text-lg shadow-lg">🔊 Listen</button>`
+    : '';
+  const flipBtn = card.type === 'hw'
+    ? `<button type="button" onclick="flashFlipCard()" class="bg-white/15 hover:bg-white/25 border-2 border-white/30 text-white font-semibold px-6 py-3 rounded-2xl text-lg">${flipped ? 'Show word' : 'Flip'}</button>`
+    : '';
 
   app.innerHTML = `
     <div class="min-h-screen p-4 md:p-8 flex flex-col">
@@ -3800,10 +6528,13 @@ function renderFlashGame(app){
       <p class="text-center text-white/75 text-sm mb-3 max-w-3xl mx-auto w-full">Do you know this ${typeLabel}?</p>
       <div class="max-w-3xl mx-auto w-full">${playHeader}</div>
       <div class="flex-1 flex flex-col items-center justify-center max-w-3xl mx-auto w-full">
-        <button id="cardBtn" class="bg-gradient-to-br ${colorClass} rounded-3xl p-12 md:p-16 mb-6 shadow-2xl hover:scale-105 transition floaty">
-          <div class="text-7xl md:text-9xl font-bold">${card.value}</div>
-          ${audioOk ? '<div class="mt-4 text-sm text-white/80">🔊 Tap to listen</div>' : ''}
-        </button>
+        <div class="flex flex-wrap gap-3 justify-center mb-5 w-full">
+          ${listenBtn}
+          ${flipBtn}
+        </div>
+        <div class="bg-gradient-to-br ${colorClass} rounded-3xl p-12 md:p-16 mb-6 shadow-2xl floaty w-full max-w-lg">
+          <div class="flash-card-face">${cardFaceHtml}</div>
+        </div>
         <div class="flex flex-col sm:flex-row gap-3 w-full max-w-md justify-center">
           <button onclick="sfxClick(); flashAnswer(false)" class="bg-orange-500/40 hover:bg-orange-500/60 border-2 border-orange-300 px-6 py-3 rounded-xl font-semibold text-lg flex-1">Still learning</button>
           <button onclick="sfxClick(); flashAnswer(true)" class="bg-green-500/40 hover:bg-green-500/60 border-2 border-green-300 px-6 py-3 rounded-xl font-semibold text-lg flex-1">I know it</button>
@@ -3811,21 +6542,36 @@ function renderFlashGame(app){
       </div>
     </div>`;
   setTimeout(() => {
-    const cardBtn = $('cardBtn');
-    if (cardBtn && audioOk) cardBtn.addEventListener('click', () => playTargetListen(card.value));
-    if (!g.feedback) playFlashTargetOnShow(g, card.value);
+    document.getElementById('flashListenBtn')?.addEventListener('click', () => flashListen());
   }, 0);
 }
+
+window.flashFlipCard = () => {
+  const g = state.game;
+  if (!g || g.type !== 'flash' || g.cards[g.cardIdx]?.type !== 'hw') return;
+  sfxClick();
+  g.flashFlipped = !g.flashFlipped;
+  render();
+};
+
+window.flashListen = () => {
+  const g = state.game;
+  if (!g || g.type !== 'flash') return;
+  const card = g.cards[g.cardIdx];
+  const track = card.type === 'hw' ? 'hw' : 'gpc';
+  if (!hasAudio(card.value, track)) return;
+  sfxClick();
+  speak(card.value, track);
+};
+
 window.flashAnswer = (got) => {
   const g = state.game;
   const card = g.cards[g.cardIdx];
   setFlashResult(state.selectedStudent, card.value, got ? 'got' : 'tricky');
   g.history.push({ target: card.value, type: card.type, correct: got });
   g.attempts++;
-  if (got) {
-    g.correct++;
-    playTargetOnCorrect(g, card.value);
-  }
+  if (got) g.correct++;
+  g.flashFlipped = false;
   g.cardIdx++;
   resetTargetAudioFlags(g);
   if (g.cardIdx >= g.cards.length) g.finished = true;
@@ -3971,7 +6717,7 @@ function renderSoundFlipGlyph(gpc, variant) {
 function initSoundFlip(needs) {
   const g = state.game;
   g.roundTargets = buildRoundTargets(needs, 'gpc', CHALLENGE_ROUNDS);
-  g.targetPool = [...new Set([...needs.targetGpcs.map(x => x.gpc), ...needs.masteredGpcs.map(x => x.gpc)])];
+  g.targetPool = [...new Set([...needs.targetGpcs.map(gpcPoolKey), ...needs.masteredGpcs.map(gpcPoolKey)])];
   g.totalRounds = CHALLENGE_ROUNDS;
   if (g.roundTargets.length === 0) { g.empty = true; return; }
   newSoundFlipRound();
@@ -3982,9 +6728,10 @@ function newSoundFlipRound() {
   if (g.roundIdx >= g.totalRounds) { g.finished = true; return; }
   g.currentTarget = g.roundTargets[g.roundIdx];
   g.currentExampleWord = resolveGpcExampleWord(g.currentTarget);
-  g.currentOptions = buildSoundFlipVariants(g.currentTarget);
+  g.currentOptions = buildSoundFlipVariants(gpcDisplayPhoneme(g.currentTarget));
   g.feedback = null;
   g.flipPhase = 'prompt';
+  g.roundHadError = false;
   resetTargetAudioFlags(g);
   if (g._flipReadyTimer) { clearTimeout(g._flipReadyTimer); g._flipReadyTimer = null; }
   if (g._promptAudio) {
@@ -4005,7 +6752,7 @@ function startSoundFlipPrompt() {
     render();
   };
 
-  const audioData = getAudioSource(g.currentTarget);
+  const audioData = getAudioSource(g.currentTarget, 'gpc');
   if (audioData) {
     try {
       const audio = new Audio(audioData);
@@ -4036,7 +6783,7 @@ function renderSoundFlip(app) {
       else if (g.feedback.picked === opt.id) cls += ' ring-4 ring-red-400 opacity-60 shake';
       else cls += ' opacity-35';
     }
-    return `<button type="button" class="${cls}" data-flip-id="${opt.id}" ${!canPick ? 'disabled' : ''}>${renderSoundFlipGlyph(g.currentTarget, opt)}</button>`;
+    return `<button type="button" class="${cls}" data-flip-id="${opt.id}" ${!canPick ? 'disabled' : ''}>${renderSoundFlipGlyph(gpcDisplayPhoneme(g.currentTarget), opt)}</button>`;
   }).join('');
 
   const playHeader = renderGamePlayHeader({
@@ -4054,7 +6801,7 @@ function renderSoundFlip(app) {
         <div class="sound-flip-main fadeIn">
           <div class="flex flex-col items-center">
             <div class="sound-flip-model sound-flip-font rounded-2xl px-8 py-10 sm:px-10 sm:py-12 flex items-center justify-center text-5xl sm:text-6xl md:text-7xl font-bold min-w-[8rem] ${modelGlow ? 'prompt-glow' : ''}">
-              ${g.currentTarget}
+              ${escapeHtmlText(gpcDisplayPhoneme(g.currentTarget))}
             </div>
             ${audioOk ? `<button type="button" id="soundFlipListen" class="mt-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold px-5 py-2 rounded-xl text-sm shadow-lg">🔊 Listen</button>` : ''}
           </div>
@@ -4095,12 +6842,14 @@ window.pickSoundFlip = (optionId) => {
   const correct = !!opt.isCorrect;
   if (correct) {
     g.attempts++;
-    g.correct++;
+    if (!g.roundHadError) g.correct++;
     confetti();
     g.feedback = { picked: optionId, correct: true, message: correctFeedback(g.currentTarget, 'gpc', 'soundFlip') };
     playTargetOnCorrect(g, g.currentTarget);
-    g.history.push({ target: g.currentTarget, picked: optionId, correct, type: 'gpc' });
+    g.history.push({ target: g.currentTarget, picked: optionId, correct: !g.roundHadError, type: 'gpc' });
+    g.roundHadError = false;
   } else {
+    g.roundHadError = true;
     g.feedback = { picked: optionId, correct: false, message: challengeWrongFeedback(g.currentTarget, 'gpc', 'soundFlip') };
   }
   render();
@@ -4121,6 +6870,289 @@ window.nextSoundFlipRound = () => {
 };
 
 // ============================================================
+// WORD JUMBLE
+// ============================================================
+function jumbleWordLetters(word) {
+  const w = String(word ?? '');
+  if (w.length <= 1) return w;
+  if (w.length === 2) return w[1] + w[0];
+  let attempts = 0;
+  while (attempts++ < 50) {
+    const shuffled = shuffle(w.split('')).join('');
+    if (shuffled.toLowerCase() !== w.toLowerCase()) return shuffled;
+  }
+  const chars = w.split('');
+  return chars[chars.length - 1] + chars.slice(1, -1).join('') + chars[0];
+}
+
+/** All unique letter orderings except the correct spelling. */
+function allWordAnagramVariants(word) {
+  const w = String(word ?? '').trim();
+  if (w.length <= 1) return [];
+  const lower = w.toLowerCase();
+  const results = new Set();
+  const permute = (chars, prefix = '') => {
+    if (!chars.length) {
+      if (prefix.toLowerCase() !== lower) results.add(prefix);
+      return;
+    }
+    const seen = new Set();
+    for (let i = 0; i < chars.length; i++) {
+      const ch = chars[i];
+      if (seen.has(ch)) continue;
+      seen.add(ch);
+      permute(chars.slice(0, i).concat(chars.slice(i + 1)), prefix + ch);
+    }
+  };
+  permute(w.split(''));
+  return [...results];
+}
+
+/** Incorrect spellings: all letter orders first, then doubled-letter variants. */
+function buildWordJumbleIncorrectSpellings(word) {
+  const w = String(word ?? '').trim();
+  if (!w) return [];
+  const lower = w.toLowerCase();
+  const variants = new Set();
+  const add = (v) => {
+    const s = String(v ?? '');
+    if (s && s.toLowerCase() !== lower) variants.add(s);
+  };
+
+  for (const a of shuffle(allWordAnagramVariants(w))) {
+    add(a);
+    if (variants.size >= 8) return [...variants];
+  }
+
+  if (w.length === 2) add(w[1] + w[0]);
+  for (let i = 0; i < w.length; i++) {
+    add(w.slice(0, i) + w[i] + w.slice(i));
+  }
+  for (let i = 0; i < w.length; i++) {
+    add(w[i] + w);
+    add(w + w[i]);
+  }
+
+  let guard = 0;
+  while (variants.size < 8 && guard++ < 20) add(jumbleWordLetters(w));
+
+  return [...variants];
+}
+
+function buildWordJumbleVariants(word, distractorPool) {
+  const correct = String(word).trim();
+  const lowerCorrect = correct.toLowerCase();
+  const incorrect = new Set();
+
+  for (const v of buildWordJumbleIncorrectSpellings(correct)) {
+    if (incorrect.size >= 3) break;
+    incorrect.add(v);
+  }
+
+  const pool = uniqueValidTokens(distractorPool || []);
+  for (const d of shuffle(pool)) {
+    if (incorrect.size >= 3) break;
+    if (d.toLowerCase() !== lowerCorrect && !incorrect.has(d)) incorrect.add(d);
+  }
+
+  for (const v of buildWordJumbleIncorrectSpellings(correct)) {
+    if (incorrect.size >= 3) break;
+    incorrect.add(v);
+  }
+  while (incorrect.size < 3) {
+    const extra = jumbleWordLetters(correct + incorrect.size);
+    if (extra.toLowerCase() !== lowerCorrect) incorrect.add(extra);
+    else incorrect.add(correct.split('').reverse().join(''));
+  }
+  const options = [
+    { id: 'correct', spelling: correct, isCorrect: true },
+    ...[...incorrect].slice(0, 3).map((sp, i) => ({ id: `j${i}`, spelling: sp, isCorrect: false }))
+  ];
+  return shuffle(options);
+}
+
+function initHwJumble(needs) {
+  const g = state.game;
+  g.roundTargets = buildRoundTargets(needs, 'hw', CHALLENGE_ROUNDS);
+  g.targetPool = uniqueValidTokens([...needs.targetHws.map(x => x.hw), ...needs.masteredHws.map(x => x.hw)], { caseSensitive: true });
+  g.distractorPool = uniqueValidTokens(needs.masteredHws.map(x => x.hw), { caseSensitive: true });
+  g.totalRounds = CHALLENGE_ROUNDS;
+  if (g.roundTargets.length === 0) { g.empty = true; return; }
+  newHwJumbleRound();
+}
+
+function newHwJumbleRound() {
+  const g = state.game;
+  if (g.roundIdx >= g.totalRounds) { g.finished = true; return; }
+  g.currentTarget = String(g.roundTargets[g.roundIdx] ?? '').trim();
+  if (!isValidGameToken(g.currentTarget)) {
+    g.roundIdx++;
+    if (g.roundIdx >= g.totalRounds) { g.finished = true; return; }
+    newHwJumbleRound();
+    return;
+  }
+  g.currentHwContext = getHwContextSnippet(g.currentTarget);
+  g.currentOptions = buildWordJumbleVariants(g.currentTarget, g.distractorPool);
+  g.feedback = null;
+  g.jumblePhase = 'prompt';
+  g.roundHadError = false;
+  resetTargetAudioFlags(g);
+  if (g._jumbleReadyTimer) { clearTimeout(g._jumbleReadyTimer); g._jumbleReadyTimer = null; }
+  if (g._jumblePromptAudio) {
+    try { g._jumblePromptAudio.pause(); } catch (e) {}
+    g._jumblePromptAudio = null;
+  }
+  if (g._hintTimer) { clearTimeout(g._hintTimer); g._hintTimer = null; }
+}
+
+function startHwJumblePrompt() {
+  const g = state.game;
+  if (!g || g.type !== 'hwJumble' || g.jumblePhase !== 'prompt' || g._spoken || g.feedback) return;
+  g._spoken = true;
+
+  const goReady = () => {
+    if (state.game !== g || g.jumblePhase !== 'prompt' || g.feedback) return;
+    if (g._jumbleReadyTimer) { clearTimeout(g._jumbleReadyTimer); g._jumbleReadyTimer = null; }
+    g.jumblePhase = 'ready';
+    render();
+  };
+
+  const audioData = getAudioSource(g.currentTarget, 'hw');
+  if (audioData) {
+    try {
+      const audio = new Audio(audioData);
+      g._jumblePromptAudio = audio;
+      audio.onended = goReady;
+      audio.onerror = () => { g._jumbleReadyTimer = setTimeout(goReady, 450); };
+      audio.play().catch(() => { g._jumbleReadyTimer = setTimeout(goReady, 500); });
+      g._jumbleReadyTimer = setTimeout(goReady, 5000);
+    } catch (e) {
+      g._jumbleReadyTimer = setTimeout(goReady, 550);
+    }
+  } else {
+    g._jumbleReadyTimer = setTimeout(goReady, 750);
+  }
+}
+
+function cleanupHwJumble() {
+  const g = state.game;
+  if (!g) return;
+  if (g._jumbleReadyTimer) { clearTimeout(g._jumbleReadyTimer); g._jumbleReadyTimer = null; }
+  if (g._jumblePromptAudio) {
+    try { g._jumblePromptAudio.pause(); } catch (e) {}
+    g._jumblePromptAudio = null;
+  }
+  if (g._hintTimer) { clearTimeout(g._hintTimer); g._hintTimer = null; }
+}
+
+window.hwJumbleShowHint = () => {
+  const g = state.game;
+  if (!g || g.type !== 'hwJumble' || g.jumblePhase === 'hint' || g.feedback) return;
+  sfxClick();
+  if (g._hintTimer) { clearTimeout(g._hintTimer); g._hintTimer = null; }
+  g.jumblePhase = 'hint';
+  render();
+  g._hintTimer = setTimeout(() => {
+    if (state.game !== g || g.jumblePhase !== 'hint') return;
+    g.jumblePhase = 'ready';
+    g._hintTimer = null;
+    render();
+  }, HW_BOX_HINT_MS);
+};
+
+window.pickHwJumble = (optionId) => {
+  const g = state.game;
+  if (!g || g.type !== 'hwJumble' || g.feedback || g.jumblePhase !== 'ready') return;
+  const opt = g.currentOptions.find(o => o.id === optionId);
+  if (!opt) return;
+  sfxClick();
+  if (opt.isCorrect) {
+    g.attempts++;
+    if (!g.roundHadError) g.correct++;
+    confetti();
+    g.feedback = { picked: optionId, correct: true, message: correctFeedback(g.currentTarget, 'hw', 'hwJumble') };
+    playTargetOnCorrect(g, g.currentTarget);
+    g.history.push({ target: g.currentTarget, picked: optionId, correct: !g.roundHadError, type: 'hw' });
+    g.roundHadError = false;
+  } else {
+    g.roundHadError = true;
+    g.feedback = { picked: optionId, correct: false, message: challengeWrongFeedback(g.currentTarget, 'hw', 'hwJumble') };
+  }
+  render();
+};
+
+window.nextHwJumbleRound = () => {
+  const g = state.game;
+  clearGameNextBtnTimer(g);
+  g.roundIdx++;
+  if (g.roundIdx >= g.totalRounds) {
+    g.finished = true;
+    cleanupHwJumble();
+    render();
+    return;
+  }
+  newHwJumbleRound();
+  render();
+};
+
+function renderHwJumble(app) {
+  const g = state.game;
+  const audioOk = hasAudio(g.currentTarget);
+  const canPick = g.jumblePhase === 'ready' && !g.feedback;
+  const showHintBtn = !g.feedback && g.jumblePhase !== 'hint';
+
+  const optionsHtml = g.currentOptions.map(opt => {
+    let cls = 'word-jumble-option';
+    if (!canPick && !g.feedback) cls += ' opacity-70';
+    if (g.feedback) {
+      if (opt.isCorrect) cls += ' ring-4 ring-green-400 scale-105';
+      else if (g.feedback.picked === opt.id) cls += ' ring-4 ring-red-400 opacity-60 shake';
+      else cls += ' opacity-35';
+    }
+    return `<button type="button" class="${cls}" data-jumble-id="${opt.id}" ${!canPick ? 'disabled' : ''}>${escapeHtmlText(opt.spelling)}</button>`;
+  }).join('');
+
+  const playHeader = renderGamePlayHeader({
+    contextHtml: '',
+    feedbackMessage: g.feedback?.message,
+    feedbackCorrect: g.feedback?.correct,
+    nextOnclick: challengeNextOnclick(g),
+    nextLabel: challengeNextLabel(g),
+  });
+
+  app.innerHTML = `
+    <div class="word-jumble-screen p-4 md:p-8">
+      <div class="word-jumble-screen-inner">
+        ${renderGameTopBar(g)}
+        ${playHeader}
+        <div class="word-jumble-main fadeIn">
+          <div class="word-jumble-controls">
+            ${audioOk ? `<button type="button" id="hwJumbleListen" class="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold px-5 py-2 rounded-xl text-sm shadow-lg">🔊 Listen</button>` : ''}
+            <button type="button" id="hwJumbleHint" class="hw-box-hint-btn${showHintBtn ? '' : ' hw-box-hint-btn--placeholder'}" aria-label="Show the word briefly" title="Show the word briefly" ${showHintBtn ? '' : 'tabindex="-1"'}>💡</button>
+          </div>
+          <div class="word-jumble-options-wrap">${optionsHtml}</div>
+        </div>
+      </div>
+      ${g.jumblePhase === 'hint' ? `
+        <div class="hw-box-hint-overlay" role="dialog" aria-label="Hint">
+          <div class="hw-box-hint-bar-wrap" style="--hw-hint-ms:${HW_BOX_HINT_MS}ms"><div class="hw-box-hint-bar"></div></div>
+          <div class="word-jumble-hint-word">${escapeHtmlText(g.currentTarget)}</div>
+        </div>
+      ` : ''}
+    </div>`;
+
+  setTimeout(() => {
+    document.querySelectorAll('[data-jumble-id]').forEach(btn => {
+      btn.addEventListener('click', () => pickHwJumble(btn.getAttribute('data-jumble-id')));
+    });
+    document.getElementById('hwJumbleListen')?.addEventListener('click', () => playTargetListen(g.currentTarget));
+    document.getElementById('hwJumbleHint')?.addEventListener('click', () => hwJumbleShowHint());
+    if (!g.feedback && g.jumblePhase === 'prompt') startHwJumblePrompt();
+    afterGameRenderArmNext();
+  }, 0);
+}
+
+// ============================================================
 // SOUND BOX
 // ============================================================
 const SOUND_BOX_COMMON_GPCS = [
@@ -4138,15 +7170,35 @@ const SOUND_BOX_BLEND_GPCS = new Set([
 
 function buildGpcSegmentPatternList(needs) {
   const set = new Set(SOUND_BOX_COMMON_GPCS.map(normalizeGpcKey));
-  for (const item of [...needs.targetGpcs, ...needs.masteredGpcs]) {
-    const key = normalizeGpcKey(item.gpc);
-    if (key) set.add(key);
+  const cls = state.data?.classes?.[state.classKey];
+  if (cls) {
+    for (const item of collectClassGpcItems(cls)) {
+      const key = normalizeGpcKey(item.gpc);
+      if (key) set.add(key);
+    }
+  }
+  if (needs) {
+    for (const item of [...needs.targetGpcs, ...needs.masteredGpcs]) {
+      const key = normalizeGpcKey(item.gpc);
+      if (key) set.add(key);
+    }
   }
   return [...set].sort((a, b) => b.length - a.length);
 }
 
-function makeSoundBoxSlot(expectedGpc, idx) {
-  return { idx, expectedGpc: normalizeGpcKey(expectedGpc), filled: null, wrong: false };
+function isSoundBoxConsonant(ch) {
+  return /[bcdfghjklmnpqrstvwxyz]/.test(String(ch ?? '').toLowerCase());
+}
+
+function makeSoundBoxSlot(expectedGpc, idx, opts = {}) {
+  return {
+    idx,
+    expectedGpc: normalizeGpcKey(expectedGpc),
+    filled: null,
+    wrong: false,
+    geminate: !!opts.geminate,
+    geminateDisplay: opts.geminateDisplay || '',
+  };
 }
 
 function isMagicEGpcKey(gpc) {
@@ -4163,26 +7215,78 @@ function soundBoxSlotAudioGpc(slot) {
   return slot.magicVowelSlot ? slot.magicGpc : slot.expectedGpc;
 }
 
+function soundBoxAudioContext(g) {
+  return {
+    exampleWord: g?.currentExampleWord || resolveGpcExampleWord(g?.currentTarget) || '',
+    focusKey: g?.currentTarget || '',
+    needs: state.selectedStudent ? getStudentNeeds(state.selectedStudent) : null,
+  };
+}
+
+/** Class / master GPC clip for Sound Box — uses example word like Assessment Buddy (e.g. a in lady). */
+function resolveSoundBoxGpcAudio(phoneme, ctx) {
+  const g = normalizeGpcKey(phoneme);
+  if (!g) return null;
+  const roundEx = String(ctx?.exampleWord ?? '').trim();
+  const needs = ctx?.needs;
+  const focusKey = String(ctx?.focusKey ?? '');
+
+  if (roundEx) {
+    const hit = getGpcAudioSource(g, roundEx);
+    if (hit) return hit;
+  }
+
+  if (focusKey.includes(GPC_AUDIO_SEP) || focusKey) {
+    const focusPh = normalizeGpcKey(gpcDisplayPhoneme(focusKey));
+    const focusEx = parseGpcStorageKey(focusKey).exampleWord;
+    if (focusPh === g && focusEx) {
+      const hit = getGpcAudioSource(g, focusEx);
+      if (hit) return hit;
+    }
+  }
+
+  if (needs) {
+    const item = findGpcNeedItem(g, needs, roundEx) || findGpcNeedItem(g, needs);
+    if (item) {
+      const hit = getGpcAudioSource(item.gpc, item.exampleWord);
+      if (hit) return hit;
+    }
+  }
+
+  const classItem = findGpcInClass(g, roundEx) || findGpcInClass(g);
+  if (classItem) {
+    const hit = getGpcAudioSource(classItem.gpc, classItem.exampleWord);
+    if (hit) return hit;
+  }
+
+  return getGpcAudioSource(g) || null;
+}
+
 /** Resolve clip plan for a slot: exact bank match, or split consonant blends. */
-function resolveSoundBoxSlotAudioClips(slot) {
+function resolveSoundBoxSlotAudioClips(slot, ctx) {
   const primary = normalizeGpcKey(soundBoxSlotAudioGpc(slot));
   if (!primary) return [];
 
+  const pushClip = (label, staggerMs) => {
+    const audioData = resolveSoundBoxGpcAudio(label, ctx);
+    return audioData ? { label, staggerMs, audioData } : null;
+  };
+
   if (SOUND_BOX_BLEND_GPCS.has(primary) && primary.length === 2) {
     const clips = [];
-    const c1 = primary[0];
-    const c2 = primary[1];
-    if (hasAudio(c1)) clips.push({ label: c1, staggerMs: 0 });
-    if (hasAudio(c2)) clips.push({ label: c2, staggerMs: SOUND_BOX_BLEND_STAGGER_MS });
+    const c1 = pushClip(primary[0], 0);
+    const c2 = pushClip(primary[1], SOUND_BOX_BLEND_STAGGER_MS);
+    if (c1) clips.push(c1);
+    if (c2) clips.push(c2);
     if (clips.length) return clips;
   }
 
-  if (hasAudio(primary)) return [{ label: primary, staggerMs: 0 }];
-  return [];
+  const single = pushClip(primary, 0);
+  return single ? [single] : [];
 }
 
-function soundBoxSlotHasAudio(slot) {
-  return resolveSoundBoxSlotAudioClips(slot).length > 0;
+function soundBoxSlotHasAudio(slot, ctx) {
+  return resolveSoundBoxSlotAudioClips(slot, ctx).length > 0;
 }
 
 /** Value placed in a box when the learner taps a GPC chip. */
@@ -4205,6 +7309,18 @@ function greedySegmentSoundBox(text, patterns) {
       if (lower.startsWith(pat, pos)) { matched = pat; break; }
     }
     if (!matched) matched = lower[pos];
+    if (
+      matched.length === 1 &&
+      isSoundBoxConsonant(matched) &&
+      lower[pos + 1] === matched
+    ) {
+      slots.push(makeSoundBoxSlot(matched, slots.length, {
+        geminate: true,
+        geminateDisplay: matched + matched,
+      }));
+      pos += 2;
+      continue;
+    }
     slots.push(makeSoundBoxSlot(matched, slots.length));
     pos += matched.length;
   }
@@ -4213,7 +7329,7 @@ function greedySegmentSoundBox(text, patterns) {
 
 function detectMagicEGpc(word, focusGpc) {
   const w = String(word ?? '').trim().toLowerCase();
-  const focusKey = normalizeGpcKey(focusGpc);
+  const focusKey = normalizeGpcKey(gpcDisplayPhoneme(focusGpc));
   const lvEntry = LONG_VOWEL_WORD_INDEX[w];
   if (lvEntry?.gpc && /_e$/.test(normalizeGpcKey(lvEntry.gpc))) {
     return normalizeGpcKey(lvEntry.gpc);
@@ -4312,6 +7428,7 @@ function newSoundBoxRound(needs) {
   g.phase = 'intro';
   g.feedback = null;
   g._introPlayed = false;
+  g._sbSuccessComplete = false;
   resetTargetAudioFlags(g);
   cleanupSoundBox();
 }
@@ -4339,20 +7456,25 @@ function markSoundBoxWrongSlots(g, wrongIndices) {
   wrongIndices.forEach(i => { if (g.slots[i]) g.slots[i].wrong = true; });
 }
 
+function soundBoxCanInteract(g) {
+  return g.phase === 'intro' || g.phase === 'spell' || g.phase === 'retry';
+}
+
 function soundBoxEnterValidate() {
   const g = state.game;
-  if (!g || g.type !== 'soundBox' || (g.phase !== 'spell' && g.phase !== 'retry') || !soundBoxAllFilled(g)) return;
+  if (!g || g.type !== 'soundBox' || !soundBoxCanInteract(g) || !soundBoxAllFilled(g)) return;
   g.attempts++;
   const result = validateSoundBox(g);
   if (result.ok) {
     if (!g.roundHadError) g.correct++;
     confetti();
     g.feedback = { correct: true, message: correctFeedback(g.currentTarget, 'gpc', 'soundBox') };
-    playTargetOnCorrect(g, g.currentTarget);
     g.history.push({ target: g.currentTarget, correct: !g.roundHadError, type: 'gpc' });
     g.roundHadError = false;
     g.roundMistakeLogged = false;
     g.phase = 'roundEnd';
+    g._sbSuccessComplete = false;
+    g._spokenCorrect = false;
   } else {
     markSoundBoxWrongSlots(g, result.wrongIndices);
     g.roundHadError = true;
@@ -4368,17 +7490,18 @@ function soundBoxEnterValidate() {
 
 function soundBoxPickGpc(gpc) {
   const g = state.game;
-  if (!g || g.type !== 'soundBox' || (g.phase !== 'spell' && g.phase !== 'retry')) return;
+  if (!g || g.type !== 'soundBox' || !soundBoxCanInteract(g)) return;
   const slotIdx = soundBoxNextEmptySlotIndex(g);
   if (slotIdx < 0) return;
   sfxClick();
   const slot = g.slots[slotIdx];
   slot.filled = soundBoxResolveFill(gpc, slot);
   slot.wrong = false;
+  if (g.phase === 'intro') g.phase = 'spell';
   if (g.phase === 'retry') g.feedback = null;
   if (soundBoxAllFilled(g)) {
     setTimeout(() => {
-      if (state.game === g && (g.phase === 'spell' || g.phase === 'retry') && soundBoxAllFilled(g)) {
+      if (state.game === g && soundBoxCanInteract(g) && soundBoxAllFilled(g)) {
         soundBoxEnterValidate();
       }
     }, 350);
@@ -4388,22 +7511,23 @@ function soundBoxPickGpc(gpc) {
 
 function renderSoundBoxBankChip(gpc) {
   const key = normalizeGpcKey(gpc);
-  if (isMagicEGpcKey(key)) {
-    const vowel = key.replace('_e', '');
-    return `<span class="sb-magic-v">${vowel}</span><span class="sb-magic-e">e</span>`;
-  }
+  if (isMagicEGpcKey(key)) return escapeHtmlText(key);
   return escapeHtmlText(gpc);
 }
 
-function soundBoxMagicSuffixVisible(g) {
-  if (!g.magicSuffix) return false;
+function soundBoxMagicSuffixHtml(g) {
+  if (!g.magicSuffix) return '';
   const magicSlot = g.slots.find(s => s.magicVowelSlot);
-  return magicSlot && magicSlot.filled != null;
+  const placed = magicSlot && magicSlot.filled != null;
+  if (placed) {
+    return `<span id="soundBoxMagicE" class="sound-box-magic-e" aria-label="silent e">${g.magicSuffix}</span>`;
+  }
+  return `<span id="soundBoxMagicE" class="sound-box-magic-e-line" aria-hidden="true"></span>`;
 }
 
 window.soundBoxShowHint = () => {
   const g = state.game;
-  if (!g || g.type !== 'soundBox' || g.phase === 'hint' || g.phase === 'intro' || g.phase === 'roundEnd') return;
+  if (!g || g.type !== 'soundBox' || g.phase === 'hint' || g.phase === 'roundEnd' || !soundBoxCanInteract(g)) return;
   sfxClick();
   if (g._hintTimer) { clearTimeout(g._hintTimer); g._hintTimer = null; }
   g.phase = 'hint';
@@ -4418,7 +7542,7 @@ window.soundBoxShowHint = () => {
 
 function soundBoxClearSlot(slotIdx) {
   const g = state.game;
-  if (!g || g.type !== 'soundBox' || (g.phase !== 'spell' && g.phase !== 'retry')) return;
+  if (!g || g.type !== 'soundBox' || !soundBoxCanInteract(g)) return;
   const slot = g.slots[slotIdx];
   if (!slot || slot.filled == null) return;
   sfxClick();
@@ -4429,9 +7553,26 @@ function soundBoxClearSlot(slotIdx) {
   render();
 }
 
+function soundBoxHideExampleWordReveal() {
+  const el = document.getElementById('soundBoxExampleReveal');
+  if (!el) return;
+  el.textContent = '';
+  el.classList.remove('sound-box-example-reveal--visible');
+  el.setAttribute('aria-hidden', 'true');
+}
+
+function soundBoxShowExampleWordReveal(word) {
+  const el = document.getElementById('soundBoxExampleReveal');
+  if (!el || !word) return;
+  el.textContent = word;
+  el.classList.add('sound-box-example-reveal--visible');
+  el.setAttribute('aria-hidden', 'false');
+}
+
 function cleanupSoundBox() {
   const g = state.game;
   soundBoxClearPlayingHighlight();
+  soundBoxHideExampleWordReveal();
   if (!g) return;
   if (g._hintTimer) { clearTimeout(g._hintTimer); g._hintTimer = null; }
   if (g._sbSeqTimer) { clearTimeout(g._sbSeqTimer); g._sbSeqTimer = null; }
@@ -4449,20 +7590,25 @@ function cleanupSoundBox() {
   }
 }
 
-function soundBoxHighlightSlot(slotIdx) {
+function soundBoxHighlightSlot(g, slotIdx) {
+  const slot = g?.slots?.[slotIdx];
+  const flashMagicE = !!slot?.magicVowelSlot;
   document.querySelectorAll('[data-sb-slot]').forEach(btn => {
     const idx = parseInt(btn.getAttribute('data-sb-slot'), 10);
     btn.classList.toggle('sound-box-cell--playing', idx === slotIdx);
   });
+  const magicE = document.getElementById('soundBoxMagicE');
+  if (magicE) magicE.classList.toggle('sound-box-magic-e--playing', flashMagicE);
 }
 
 function soundBoxClearPlayingHighlight() {
   document.querySelectorAll('.sound-box-cell--playing').forEach(el => {
     el.classList.remove('sound-box-cell--playing');
   });
+  document.getElementById('soundBoxMagicE')?.classList.remove('sound-box-magic-e--playing');
 }
 
-function playSoundBoxSlotClips(g, clips, slotIdx, onSlotDone) {
+function playSoundBoxSlotClips(g, clips, slotIdx, onSlotDone, { staggerScale = 1 } = {}) {
   if (!clips.length) { onSlotDone(); return; }
   g._sbSeqAudios = g._sbSeqAudios || [];
   g._sbSeqClipTimers = g._sbSeqClipTimers || [];
@@ -4479,13 +7625,14 @@ function playSoundBoxSlotClips(g, clips, slotIdx, onSlotDone) {
   };
 
   clips.forEach(clip => {
+    const staggerMs = Math.round((clip.staggerMs || 0) * staggerScale);
     const t = setTimeout(() => {
       if (state.game !== g) return;
-      const audioData = getAudioSource(clip.label);
+      const audioData = clip.audioData || resolveSoundBoxGpcAudio(clip.label, soundBoxAudioContext(g));
       if (!audioData) { finishClip(); return; }
       if (!highlighted) {
         highlighted = true;
-        soundBoxHighlightSlot(slotIdx);
+        soundBoxHighlightSlot(g, slotIdx);
       }
       try {
         const audio = new Audio(audioData);
@@ -4502,7 +7649,7 @@ function playSoundBoxSlotClips(g, clips, slotIdx, onSlotDone) {
       } catch (e) {
         finishClip();
       }
-    }, clip.staggerMs || 0);
+    }, staggerMs);
     g._sbSeqClipTimers.push(t);
   });
 }
@@ -4512,15 +7659,19 @@ function playSoundBoxSlotSequence(g, {
   initialDelayMs = 400,
   thenPlayWord = '',
   markSpoken = false,
+  revealWordOnPlay = false,
+  keepWordVisibleAfterPlay = false,
+  clipStaggerScale = 1,
   onComplete = null
 } = {}) {
   if (!g || g.type !== 'soundBox') return false;
+  const audioCtx = soundBoxAudioContext(g);
   const slotPlans = g.slots.map((slot, slotIdx) => ({
     slotIdx,
-    clips: resolveSoundBoxSlotAudioClips(slot)
+    clips: resolveSoundBoxSlotAudioClips(slot, audioCtx)
   })).filter(p => p.clips.length);
   const word = String(thenPlayWord ?? '').trim();
-  if (!slotPlans.length && !(word && hasAudio(word))) return false;
+  if (!slotPlans.length && !(word && hasExampleWordAudio(word))) return false;
 
   cleanupSoundBox();
   if (markSpoken) g._spoken = true;
@@ -4530,12 +7681,14 @@ function playSoundBoxSlotSequence(g, {
 
   const finishAll = () => {
     soundBoxClearPlayingHighlight();
-    if (word && hasAudio(word)) {
+    if (word && hasExampleWordAudio(word)) {
       speakWithCallback(word, () => {
+        if (revealWordOnPlay) soundBoxShowExampleWordReveal(word);
         if (onComplete) onComplete();
-      });
+      }, 'hw');
       return;
     }
+    if (revealWordOnPlay && word) soundBoxShowExampleWordReveal(word);
     if (onComplete) onComplete();
   };
 
@@ -4554,7 +7707,7 @@ function playSoundBoxSlotSequence(g, {
     isFirstSlot = false;
     g._sbSeqTimer = setTimeout(() => {
       if (state.game !== g) return;
-      playSoundBoxSlotClips(g, clips, slotIdx, playNextSlot);
+      playSoundBoxSlotClips(g, clips, slotIdx, playNextSlot, { staggerScale: clipStaggerScale });
     }, delay);
   };
 
@@ -4569,7 +7722,7 @@ function playSoundBoxSequenceOnShow(g) {
   const started = playSoundBoxSlotSequence(g, {
     gapMs: SOUND_BOX_AUDIO_GAP_MS,
     initialDelayMs: 400,
-    thenPlayWord: exampleWord && hasAudio(exampleWord) ? exampleWord : '',
+    thenPlayWord: exampleWord && hasExampleWordAudio(exampleWord) ? exampleWord : '',
     onComplete: () => {
       if (state.game !== g || g.phase !== 'intro') return;
       g.phase = 'spell';
@@ -4585,11 +7738,47 @@ function playSoundBoxSequenceOnShow(g) {
 
 function playSoundBoxListen(g, exampleWord) {
   if (!g || g.type !== 'soundBox') return;
+  const word = exampleWord && hasExampleWordAudio(exampleWord) ? exampleWord : '';
   playSoundBoxSlotSequence(g, {
     gapMs: 0,
     initialDelayMs: 0,
-    thenPlayWord: exampleWord
+    thenPlayWord: word,
   });
+}
+
+function playSoundBoxSlotTap(g, slotIdx) {
+  if (!g || g.type !== 'soundBox') return;
+  const slot = g.slots?.[slotIdx];
+  if (!slot || slot.filled != null) return;
+  const clips = resolveSoundBoxSlotAudioClips(slot, soundBoxAudioContext(g));
+  if (!clips.length) return;
+  sfxClick();
+  cleanupSoundBox();
+  playSoundBoxSlotClips(g, clips, slotIdx, () => soundBoxClearPlayingHighlight());
+}
+
+function playSoundBoxSuccessSequence(g) {
+  if (!g || g.type !== 'soundBox' || g.phase !== 'roundEnd' || !g.feedback?.correct || g._spokenCorrect) return;
+  g._spokenCorrect = true;
+  const exampleWord = g.currentExampleWord || resolveGpcExampleWord(g.currentTarget);
+  const finishSuccess = () => {
+    if (state.game !== g || g.phase !== 'roundEnd') return;
+    g._sbSuccessComplete = true;
+    render();
+  };
+  const started = playSoundBoxSlotSequence(g, {
+    gapMs: SOUND_BOX_AUDIO_GAP_MS * 0.5,
+    clipStaggerScale: 0.5,
+    initialDelayMs: 200,
+    thenPlayWord: exampleWord && hasExampleWordAudio(exampleWord) ? exampleWord : '',
+    onComplete: finishSuccess,
+  });
+  if (started) return;
+  if (exampleWord && hasExampleWordAudio(exampleWord)) {
+    speakWithCallback(exampleWord, finishSuccess, 'hw');
+    return;
+  }
+  finishSuccess();
 }
 
 window.nextSoundBoxRound = () => {
@@ -4610,21 +7799,20 @@ window.nextSoundBoxRound = () => {
 function renderSoundBox(app) {
   const g = state.game;
   const exampleWord = g.currentExampleWord || resolveGpcExampleWord(g.currentTarget);
-  const showBank = g.phase === 'spell' || g.phase === 'retry';
+  const showBank = soundBoxCanInteract(g);
   const showHintBtn = showBank;
-  const inIntro = g.phase === 'intro';
 
   const boxesHtml = g.slots.map(slot => {
     let cls = 'sound-box-cell';
     if (slot.filled) cls += ' filled';
     if (slot.wrong) cls += ' wrong-slot';
-    const label = slot.filled || '';
+    const label = slot.filled
+      ? (slot.geminate ? slot.geminateDisplay : slot.filled)
+      : '';
     return `<div class="sound-box-slot"><button type="button" class="${cls}" data-sb-slot="${slot.idx}">${label}</button></div>`;
   }).join('');
 
-  const magicHtml = soundBoxMagicSuffixVisible(g)
-    ? `<span class="sound-box-magic-e" aria-label="silent e">${g.magicSuffix}</span>`
-    : '';
+  const magicHtml = soundBoxMagicSuffixHtml(g);
 
   const bankHtml = showBank
     ? g.bank.map(gpc =>
@@ -4641,12 +7829,15 @@ function renderSoundBox(app) {
 
   const roundEndPanel = (g.phase === 'roundEnd' && g.feedback) ? `
     <div class="sound-box-round-end fadeIn">
-      ${renderGameNextButton('Next', 'nextSoundBoxRound()')}
+      ${g._sbSuccessComplete ? renderGameNextButton('Next', 'nextSoundBoxRound()') : ''}
     </div>` : '';
+
+  const showExampleWord = g.phase === 'roundEnd' && g.feedback?.correct && g._sbSuccessComplete;
+  const exampleRevealHtml = `<div id="soundBoxExampleReveal" class="sound-box-example-reveal${showExampleWord ? ' sound-box-example-reveal--visible' : ''}" aria-hidden="${showExampleWord ? 'false' : 'true'}">${showExampleWord ? escapeHtmlText(exampleWord || g.currentTarget) : ''}</div>`;
 
   const bottomPanel = showBank
     ? `<div class="sound-box-bank-grid" id="soundBoxBank">${bankHtml}</div>`
-    : (inIntro
+    : (g.phase === 'roundEnd' && g.feedback?.correct && !g._sbSuccessComplete
       ? `<div class="sound-box-bank-pending" aria-live="polite">Listen to each sound…</div>`
       : roundEndPanel);
 
@@ -4657,13 +7848,18 @@ function renderSoundBox(app) {
         ${playHeader}
         <div class="sound-box-playfield">
           <button type="button" id="soundBoxListen" class="sound-box-listen-btn bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white font-bold px-6 py-3 rounded-2xl text-lg shadow-lg">🔊 Listen</button>
-          <div class="sound-box-spell-row">
-            <div class="sound-box-word-row" aria-label="Sound boxes">
-              ${boxesHtml}${magicHtml}
+          <div class="sound-box-spell-wrap">
+            <div class="sound-box-spell-row">
+              <div class="sound-box-word-row" aria-label="Sound boxes">
+                ${boxesHtml}${magicHtml}
+              </div>
+              <button type="button" id="soundBoxHint" class="hw-box-hint-btn sound-box-hint-btn${showHintBtn ? '' : ' hw-box-hint-btn--placeholder'}" aria-label="Show the word briefly" title="Show the word briefly" ${showHintBtn ? '' : 'tabindex="-1"'}>💡</button>
             </div>
-            <button type="button" id="soundBoxHint" class="hw-box-hint-btn sound-box-hint-btn${showHintBtn ? '' : ' hw-box-hint-btn--placeholder'}" aria-label="Show the word briefly" title="Show the word briefly" ${showHintBtn ? '' : 'tabindex="-1"'}>💡</button>
+            ${exampleRevealHtml}
           </div>
-          ${bottomPanel}
+          <div class="sound-box-bottom-slot">
+            ${bottomPanel}
+          </div>
         </div>
       </div>
       ${g.phase === 'hint' ? `
@@ -4676,7 +7872,7 @@ function renderSoundBox(app) {
 
   setTimeout(() => {
     attachSoundBoxHandlers(g, exampleWord);
-    afterGameRenderArmNext();
+    if (g.phase !== 'roundEnd' || g._sbSuccessComplete) afterGameRenderArmNext();
   }, 0);
 }
 
@@ -4688,20 +7884,28 @@ function attachSoundBoxHandlers(g, exampleWord) {
   if (g.phase === 'intro' && !g._introPlayed) {
     setTimeout(() => playSoundBoxSequenceOnShow(g), 400);
   }
-  if (!showBankPhase(g)) return;
-  document.querySelectorAll('[data-sb-gpc]').forEach(btn => {
-    btn.addEventListener('click', () => soundBoxPickGpc(btn.getAttribute('data-sb-gpc')));
-  });
-  document.querySelectorAll('[data-sb-slot]').forEach(btn => {
-    const slotIdx = parseInt(btn.getAttribute('data-sb-slot'), 10);
-    btn.addEventListener('click', () => {
-      if (g.slots[slotIdx]?.filled != null) soundBoxClearSlot(slotIdx);
+  if (g.phase === 'roundEnd' && g.feedback?.correct && !g._spokenCorrect) {
+    setTimeout(() => playSoundBoxSuccessSequence(g), 400);
+  }
+  if (soundBoxCanInteract(g)) {
+    document.querySelectorAll('[data-sb-slot]').forEach(btn => {
+      const slotIdx = parseInt(btn.getAttribute('data-sb-slot'), 10);
+      btn.addEventListener('click', () => {
+        if (g.slots[slotIdx]?.filled != null) {
+          soundBoxClearSlot(slotIdx);
+        } else if (g.slots[slotIdx]?.filled == null) {
+          playSoundBoxSlotTap(g, slotIdx);
+        }
+      });
     });
-  });
+    document.querySelectorAll('[data-sb-gpc]').forEach(btn => {
+      btn.addEventListener('click', () => soundBoxPickGpc(btn.getAttribute('data-sb-gpc')));
+    });
+  }
 }
 
 function showBankPhase(g) {
-  return g.phase === 'spell' || g.phase === 'retry';
+  return soundBoxCanInteract(g);
 }
 
 // ============================================================
@@ -4709,11 +7913,12 @@ function showBankPhase(g) {
 // ============================================================
 function initCatchSound(needs) {
   const g = state.game;
-  const targets = needs.targetGpcs.map(x => x.gpc);
-  const mastered = needs.masteredGpcs.map(x => x.gpc);
+  const targets = needs.targetGpcs.map(gpcPoolKey);
+  const mastered = needs.masteredGpcs.map(gpcPoolKey);
   g.roundTargets = buildRoundTargets(needs, 'gpc', CHALLENGE_ROUNDS);
-  g.targetPool = uniqueValidTokens([...targets, ...mastered]);
-  g.distractorPool = uniqueValidTokens(mastered.length > 0 ? mastered : targets);
+  g.targetPool = uniqueValidTokens([...targets, ...mastered], { caseSensitive: true });
+  g.distractorPool = uniqueValidTokens(mastered.length > 0 ? mastered : targets, { caseSensitive: true });
+  g.masteryStats = getCombinedMasteryStats(needs);
   if (g.roundTargets.length === 0) { g.empty = true; return; }
   g.lives = 5;
   g.maxLives = 5;
@@ -4723,8 +7928,17 @@ function initCatchSound(needs) {
   g.correct = 0;
   g.won = false;
   g.catchPhase = 'play';
+  g.catchFrozen = false;
   newCatchRound();
 }
+
+window.catchToggleFreeze = () => {
+  const g = state.game;
+  if (!g || g.type !== 'gpcCatch' || g.catchPhase === 'break' || g.finished) return;
+  sfxClick();
+  g.catchFrozen = !g.catchFrozen;
+  render();
+};
 
 function startCatchBreak() {
   const g = state.game;
@@ -4767,7 +7981,7 @@ function newCatchRound() {
   }
   g.currentTarget = target;
   g.currentExampleWord = resolveGpcExampleWord(target);
-  g.currentOptions = buildChallengeOptions(target, g.distractorPool, g.targetPool, 5, 'gpc');
+  g.currentOptions = buildCatchChallengeOptions(target, g.distractorPool, g.targetPool, 5, g.masteryStats);
   g.feedback = null;
   resetTargetAudioFlags(g);
   startCatchTimer(g);
@@ -4785,7 +7999,7 @@ function startCatchTimer(g) {
       correct: false,
       message: pickFeedbackMessage([
         "Time's up! Say the sound.",
-        `Say "${g.currentTarget}". Try again.`
+        `Say "${gpcDisplayPhoneme(g.currentTarget)}". Try again.`
       ])
     };
     render();
@@ -4878,12 +8092,13 @@ function renderCatchSound(app) {
   const optionsHtml = g.currentOptions.map((opt, i) => {
     const drift = driftClasses[i % driftClasses.length];
     let cls = `catchBubble ${drift} bg-gradient-to-br from-emerald-400 to-teal-600 splat w-full aspect-square flex items-center justify-center font-bold cursor-pointer shadow-2xl select-none`;
+    if (g.catchFrozen) cls += ' catch-frozen';
     if (g.feedback) {
       if (opt === g.currentTarget) cls += ' ring-4 ring-green-400';
       else if (g.feedback.picked === opt) cls += ' ring-4 ring-red-400 opacity-50';
       else cls += ' opacity-30';
     }
-    return `<div class="flex items-center justify-center p-1"><button class="${cls}" style="font-size: clamp(1.5rem, 5vw, 2.75rem);" data-option="${opt}">${opt}</button></div>`;
+    return `<div class="flex items-center justify-center p-1"><button class="${cls}" style="font-size: clamp(1.5rem, 5vw, 2.75rem);" data-option="${opt.replace(/"/g, '&quot;')}">${formatGpcCatchOptionLabel(opt)}</button></div>`;
   }).join('');
 
   const timerBar = !g.feedback
@@ -4909,7 +8124,8 @@ function renderCatchSound(app) {
         ${exampleHint ? `<div class="gpc-example-corner">${exampleHint}</div>` : ''}
         ${playHeader}
         <div class="gpc-catch-timer flex-shrink-0">${timerBar}</div>
-        <div class="gpc-splat-area flex-1 min-h-0 flex items-center justify-center w-full">
+        <div class="gpc-splat-area flex-1 min-h-0 flex items-center justify-center w-full relative">
+          <button type="button" onclick="catchToggleFreeze()" class="gpc-catch-freeze-btn${g.catchFrozen ? ' is-frozen' : ''}" title="${g.catchFrozen ? 'Resume bubble movement' : 'Freeze bubble movement'}">${g.catchFrozen ? '▶' : '⏸'}</button>
           <div class="gpc-splat-grid-wrap w-full" style="max-width: 480px;">
             <div class="grid grid-cols-3 gap-1 sm:gap-2 w-full pt-1 pr-1">
               ${optionsHtml}
@@ -5301,31 +8517,27 @@ function isWordBoxBlankNotFirst(sentence) {
   return first !== '____' && !/^_____?$/.test(first);
 }
 
-function getWordBoxContextSentence(word) {
-  const key = String(word).toLowerCase();
-  const longEntry = LONG_VOWEL_WORD_INDEX[key];
-  if (longEntry?.sentences?.length) {
-    const valid = longEntry.sentences
-      .map(s => s.replace(/_____/g, '____'))
-      .filter(isWordBoxBlankNotFirst);
-    if (valid.length) return valid[Math.floor(Math.random() * valid.length)];
+function getWordBoxContextSentence(word, g) {
+  const entries = getHwBlankEntries(word, g?.targetPool || []);
+  const valid = entries
+    .map(e => e.s.replace(/_____/g, '____'))
+    .filter(isWordBoxBlankNotFirst);
+  if (!valid.length) return '';
+  const key = getHwSentenceKey(word);
+  if (g) {
+    if (!g.contextDecks) g.contextDecks = {};
+    if (!g.contextDecks[key]) g.contextDecks[key] = createCycleDeck(valid);
+    const next = g.contextDecks[key].next();
+    if (next) return next;
   }
-  const pool = (WORD_BOX_CONTEXT[key] || []).filter(isWordBoxBlankNotFirst);
-  if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
-  const entries = HW_SENTENCES[key];
-  if (entries?.length) {
-    const valid = entries
-      .map(e => e.s.replace(/_____/g, '____'))
-      .filter(isWordBoxBlankNotFirst);
-    if (valid.length) return valid[Math.floor(Math.random() * valid.length)];
-  }
-  return '';
+  return valid[Math.floor(Math.random() * valid.length)];
 }
 
 function initHwBoxes(needs) {
   const g = state.game;
   g.roundTargets = buildRoundTargets(needs, 'hw', CHALLENGE_ROUNDS);
-  g.targetPool = uniqueValidTokens([...needs.targetHws.map(x => x.hw), ...needs.masteredHws.map(x => x.hw)]);
+  g.targetPool = uniqueValidTokens([...needs.targetHws.map(x => x.hw), ...needs.masteredHws.map(x => x.hw)], { caseSensitive: true });
+  g.contextDecks = {};
   g.totalRounds = CHALLENGE_ROUNDS;
   g.roundIdx = 0;
   g.correct = 0;
@@ -5347,7 +8559,7 @@ function newHwBoxesRound() {
     newHwBoxesRound();
     return;
   }
-  g.contextSentence = getWordBoxContextSentence(g.currentTarget);
+  g.contextSentence = getWordBoxContextSentence(g.currentTarget, g);
   g.slots = buildElkoninSlots(g.currentTarget);
   g.bank = buildElkoninBank();
   g.phase = 'spell';
@@ -5625,8 +8837,9 @@ function initHwBlank(needs) {
   g.targetPool = uniqueValidTokens([
     ...needs.targetHws.map(x => x.hw),
     ...needs.masteredHws.map(x => x.hw),
-  ]);
+  ], { caseSensitive: true });
   g.sentenceDecks = {};
+  g.contextDecks = {};
   if (g.roundTargets.length === 0) { g.empty = true; return; }
   g.totalRounds = CHALLENGE_ROUNDS;
   g.roundIdx = 0;
@@ -5645,7 +8858,7 @@ function newBlankRound() {
     newBlankRound();
     return;
   }
-  const key = target.toLowerCase();
+  const key = getHwSentenceKey(target);
   const entries = getHwBlankEntries(target, g.targetPool);
   if (!g.sentenceDecks[key]) g.sentenceDecks[key] = createCycleDeck(entries);
   const entry = g.sentenceDecks[key].next();
@@ -5660,6 +8873,7 @@ function newBlankRound() {
   g.currentSentence = entry.s;
   g.currentOptions = buildBlankChallengeOptions(target, curatedD, g.targetPool, 3);
   g.feedback = null;
+  g.roundHadError = false;
   resetTargetAudioFlags(g);
 }
 
@@ -5676,11 +8890,13 @@ window.blankPick = (opt) => {
       correct: true,
       message: correctFeedback(g.currentTarget, 'hw', 'hwBlank')
     };
-    g.correct++;
+    if (!g.roundHadError) g.correct++;
     confetti();
     playTargetOnCorrect(g, g.currentTarget);
-    g.history.push({ target: g.currentTarget, picked: opt, correct, type: 'hw' });
+    g.history.push({ target: g.currentTarget, picked: opt, correct: !g.roundHadError, type: 'hw' });
+    g.roundHadError = false;
   } else {
+    g.roundHadError = true;
     g.feedback = {
       picked: opt,
       correct: false,
@@ -5775,61 +8991,23 @@ function gameEndCorrectFraction(g) {
 }
 
 function calcReadingGameStars(g) {
-  return Math.max(0, g.correct || 0);
+  if (!g.finished) return 0;
+  return READING_GAME_BASE_STARS;
 }
 
 function renderGameEnd(app){
   const g = state.game;
-  const scoreDenom = gameEndScoreTotal(g);
-  const pct = scoreDenom ? Math.round((g.correct || 0) / scoreDenom * 100) : 0;
-  let msg, emoji;
-  let success = pct >= 70;
-
-  if (g.type === 'gpcCatch') {
-    success = !!g.won;
-    if (success) { msg = `You caught all ${CHALLENGE_ROUNDS} sounds!`; emoji = "🎯"; }
-    else { msg = "Out of lives! Try again."; emoji = "💔"; }
-  } else if (g.type === 'soundFlip') {
-    success = g.correct >= g.totalRounds || (g.finished && pct >= 70);
-    if (g.correct === g.totalRounds) { msg = `Perfect — all ${g.totalRounds} flipped right!`; emoji = "🏆"; }
-    else if (success) { msg = "You finished Sound Flip!"; emoji = "🔄"; }
-    else { msg = "Good try — practise those orientations again!"; emoji = "💪"; }
-  } else if (g.type === 'hwBlank') {
-    success = g.correct >= 8;
-    if (g.correct === g.totalRounds) { msg = "Perfect! Every sentence correct!"; emoji = "🏆"; }
-    else if (success) { msg = "Great job — you passed!"; emoji = "⭐"; }
-    else { msg = "Good try. Keep practising!"; emoji = "💪"; }
-  } else if (g.type === 'hwBoxes') {
-    success = g.correct >= Math.ceil(CHALLENGE_ROUNDS / 2);
-    if (g.correct === g.totalRounds) { msg = "You spelled every word in Word Box!"; emoji = "🏆"; }
-    else if (success) { msg = "Great Word Box spelling!"; emoji = "📦"; }
-    else { msg = "Good try — keep building those words!"; emoji = "💪"; }
-  } else if (g.type === 'soundBox') {
-    success = g.correct >= Math.ceil(CHALLENGE_ROUNDS / 2);
-    if (g.correct === g.totalRounds) { msg = "You built every sound in Sound Box!"; emoji = "🏆"; }
-    else if (success) { msg = "Great Sound Box work!"; emoji = "🔊"; }
-    else { msg = "Good try — keep listening for sounds!"; emoji = "💪"; }
-  } else if (g.type === 'flash') {
-    const known = g.correct;
-    const total = g.cards?.length || g.attempts || 0;
-    success = total > 0 && known >= Math.ceil(total * 0.5);
-    if (known === total && total > 0) { msg = 'You knew every item you checked!'; emoji = '🌟'; }
-    else if (success) { msg = 'Self check complete — nice work!'; emoji = '✅'; }
-    else { msg = 'Thanks for checking — keep practising!'; emoji = '💪'; }
-  } else {
-    if (pct >= 90) { msg = "Outstanding work!"; emoji = "🏆"; }
-    else if (pct >= 70) { msg = "Strong effort!"; emoji = "⭐"; }
-    else if (pct >= 50) { msg = "You're learning — keep going!"; emoji = "💪"; }
-    else { msg = "Good practise. Let's try again."; emoji = "🌱"; }
-  }
+  const scoreY = gameEndScoreTotal(g);
+  const scoreX = g.correct || 0;
+  const isPerfect = isReadingGamePerfect(g);
 
   let starsAwarded = 0;
-  let trackBonusAwarded = false;
   let perfectBonus = 0;
   const forFun = g.boardPlayer === 2;
-  if (!forFun && !g.pointsAwarded) {
+  const isBoardActivity = !!(g.fromBoard || g.fromTagMe);
+  if (!forFun && !g.pointsAwarded && !isBoardActivity) {
     starsAwarded = calcReadingGameStars(g);
-    if (isReadingGamePerfect(g)) {
+    if (isPerfect) {
       perfectBonus = READING_GAME_PERFECT_BONUS;
       starsAwarded += perfectBonus;
     }
@@ -5840,61 +9018,72 @@ function renderGameEnd(app){
     starsAwarded = calcReadingGameStars(g);
     if (g.perfectBonusAwarded) starsAwarded += g.perfectBonusAwarded;
   }
-  if (!forFun && !g.trackMarked && TRACK_GAME_IDS.includes(g.type)) {
+  let trackBonusAwarded = false;
+  if (!forFun && !g.trackMarked && READING_TRACK_GAME_IDS.includes(g.type)) {
     trackBonusAwarded = markTrackGamePlayed(state.selectedStudent, g.type);
     g.trackMarked = true;
+    if (trackBonusAwarded && !g.fromBoard && !g.fromTagMe) {
+      state.readingTrackBonusPopup = true;
+    }
   }
   if (!forFun && g.fromBoard && g.type) {
     markBoardGamePlayed(state.selectedStudent, g.type);
+    if (g.fromTagMe) markTagMeGamePlayed(state.selectedStudent, g.type);
   }
 
-  const wrongItems = g.history.filter(h => !h.correct);
-  const wrongHtml = wrongItems.length
-    ? `<div class="mt-4"><div class="text-sm text-white/60 mb-2">Items to practise more:</div><div class="flex flex-wrap gap-2 justify-center">${wrongItems.map(w => {
-        const hasAud = hasAudio(w.target);
-        return `<span class="inline-flex items-center gap-1 px-3 py-1 bg-orange-500/30 rounded-full">
-          ${w.target}
-          ${hasAud ? `<button onclick="playSound('${w.target.replace(/'/g,"\\'")}')" class="w-5 h-5 rounded-full bg-yellow-400/30 hover:bg-yellow-400/60 text-xs" title="Listen">🔊</button>` : ''}
-        </span>`;
-      }).join('')}</div></div>`
-    : `<div class="mt-4 text-green-200">Every single one correct! 🌟</div>`;
-
-  const totalStars = getPoints(state.selectedStudent);
   const perfectBonusShown = g.perfectBonusAwarded || 0;
-  const perfectBonusHtml = perfectBonusShown > 0
-    ? `<div class="game-end-perfect-bonus fadeIn">
+  let headlineHtml = '';
+  let boardCelebrateHtml = '';
+  if (isBoardActivity && !forFun) {
+    boardCelebrateHtml = `<div class="game-end-board-celebrate fadeIn mb-3" aria-hidden="true">🎉✨🌟</div>`;
+    headlineHtml = `<p class="text-xl font-semibold mb-4 arcade-instructions text-white/95">Good try! Practice makes progress!</p>`;
+    setTimeout(() => confetti(), 150);
+    if (isPerfect) setTimeout(() => confetti(), 450);
+  } else if (isPerfect && !forFun && !isBoardActivity) {
+    headlineHtml = `<div class="game-end-perfect-bonus fadeIn mb-4">
         <div class="game-end-perfect-bonus-title">Perfect score!</div>
         <div class="game-end-perfect-bonus-sub">+${perfectBonusShown} bonus stars</div>
-      </div>`
-    : '';
-  if (perfectBonusShown > 0) {
+      </div>`;
     spawnPerfectStarBurst();
     for (let i = 0; i < 3; i++) setTimeout(() => confetti(), i * 280);
+  } else if (!forFun) {
+    headlineHtml = `<p class="text-xl font-semibold mb-4 arcade-instructions text-white/95">Good try! Practice makes progress!</p>`;
   }
 
   const forFunNote = forFun ? '<p class="text-yellow-200/90 text-sm mb-4 arcade-instructions">Player 2 — playing for fun (no stars this turn)</p>' : '';
-  const starsEarnedLabel = forFun ? 'for fun' : 'stars earned';
-  const starsEarnedVal = forFun ? '—' : `+${starsAwarded}`;
-  const playAgainOpts = g.fromBoard ? `{ fromBoard: true, boardPlayer: ${g.boardPlayer || 1}${g.boardSquare != null ? ', boardSquare: ' + g.boardSquare : ''} }` : '';
+  const boardActivityNote = isBoardActivity && !forFun
+    ? '<p class="text-white/75 text-sm mb-4 arcade-instructions">Board games don\'t award stars — reach the finish for a bonus!</p>'
+    : '';
+  const starsEarnedVal = forFun || isBoardActivity ? '—' : `+${starsAwarded}`;
+  const playAgainOpts = g.fromBoard
+    ? `{ fromBoard: true${g.fromTagMe ? ', fromTagMe: true' : ''}, boardPlayer: ${g.boardPlayer || 1}${g.boardSquare != null ? ', boardSquare: ' + g.boardSquare : ''} }`
+    : `{ readingReturnView: '${g.readingReturnView || 'profileReadingGames'}' }`;
+  const boardBackView = resolveProfileGameReturnView(g);
+  const boardBackLabel = profileGameBackLabel(boardBackView);
+  const boardBackAction = g.fromTagMe
+    ? `sfxClick(); state.view='tagme'; resumeTagMeAfterActivity()`
+    : (g.fromBoard ? `sfxClick(); resumeAdventureAfterActivity()` : `sfxClick(); state.view='${boardBackView}'; render()`);
+
+  const trackBonusHtml = trackBonusAwarded
+    ? `<p class="mt-4 text-yellow-200 font-semibold fadeIn arcade-instructions">🌟 All sound and word games complete! +${READING_TRACK_BONUS} bonus stars — ready to play again!</p>`
+    : '';
+  if (trackBonusAwarded) setTimeout(() => confetti(), 400);
 
   app.innerHTML = `
     <div class="min-h-screen flex items-center justify-center p-4">
       <div class="bg-white/10 backdrop-blur border border-white/20 rounded-3xl p-8 max-w-lg w-full text-center fadeIn">
-        <div class="text-7xl mb-4">${emoji}</div>
-        <h2 class="text-3xl font-bold mb-1">${msg}</h2>
-        <p class="text-white/70 mb-6">${state.selectedStudent}</p>
         ${forFunNote}
-        ${perfectBonusHtml}
-        <div class="grid grid-cols-3 gap-3 mb-4">
-          <div class="bg-white/10 rounded-xl p-3"><div class="text-2xl font-bold">${starsEarnedVal}</div><div class="text-xs text-white/70">${starsEarnedLabel}</div></div>
-          <div class="bg-white/10 rounded-xl p-3"><div class="text-2xl font-bold">${gameEndCorrectFraction(g)}</div><div class="text-xs text-white/70">${g.type === 'flash' ? 'I know it' : 'score'}</div></div>
-          <div class="bg-yellow-400/20 rounded-xl p-3"><div class="text-2xl font-bold">${totalStars}</div><div class="text-xs text-white/70">total stars</div></div>
+        ${boardActivityNote}
+        ${boardCelebrateHtml}
+        ${headlineHtml}
+        <div class="grid grid-cols-2 gap-3 mb-6 max-w-xs mx-auto">
+          <div class="bg-white/10 rounded-xl p-4"><div class="text-3xl font-bold">${gameEndCorrectFraction(g)}</div><div class="text-xs text-white/70 mt-1">score</div></div>
+          <div class="bg-yellow-400/20 rounded-xl p-4"><div class="text-3xl font-bold">${starsEarnedVal}</div><div class="text-xs text-white/70 mt-1">${forFun ? 'for fun' : 'stars earned'}</div></div>
         </div>
-        ${wrongHtml}
-        ${trackBonusAwarded ? `<p class="mt-4 text-yellow-200 font-semibold fadeIn">🌟 Starcade bonus! +${STARCADE_TRACK_BONUS} stars — you played every game once!</p>` : ''}
-        <div class="flex gap-3 mt-6 justify-center flex-wrap">
+        ${trackBonusHtml}
+        <div class="flex gap-3 justify-center flex-wrap${trackBonusAwarded ? ' mt-4' : ''}">
           ${forFun ? '' : `<button onclick="sfxClick(); startGame('${g.type}'${playAgainOpts ? ', ' + playAgainOpts : ''})" class="bg-white/20 hover:bg-white/30 px-5 py-2 rounded-xl">Play again</button>`}
-          <button onclick="sfxClick(); state.view='${g.fromBoard ? 'adventure' : 'profile'}'; render()" class="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 px-5 py-2 rounded-xl font-semibold">${g.fromBoard ? 'Back to adventure' : 'Back to my page'}</button>
+          <button onclick="${boardBackAction}" class="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 px-5 py-2 rounded-xl font-semibold">${boardBackLabel}</button>
         </div>
       </div>
     </div>`;
@@ -5909,6 +9098,8 @@ function renderArcade(app) {
   if (state.arcadeGame === 'c4') return renderC4(app);
   if (state.arcadeGame === 'slime') return renderTreasureHunter(app);
   if (state.arcadeGame === 'pong') return renderPong(app);
+  if (state.arcadeGame === 'brickbreaker') return renderBrickBreaker(app);
+  if (state.arcadeGame === 'snake') return renderSnake(app);
 }
 
 function renderArcadeMenu(app) {
@@ -5917,7 +9108,9 @@ function renderArcadeMenu(app) {
     { id: 'ttt', name: 'Tic-Tac-Toe', emoji: '⭕', desc: 'Three in a row. You vs the computer.', cost: STARCADE_GAME_COST, accent: 'ttt' },
     { id: 'c4', name: 'Connect 4', emoji: '🔴', desc: 'Drop your pieces. Get four in a row.', cost: STARCADE_GAME_COST, accent: 'c4' },
     { id: 'slime', name: 'Treasure Hunter', emoji: '🏴‍☠️', desc: 'Say each word, find treasures, and grab ⭐ bonus tiles for +3 clicks.', cost: STARCADE_GAME_COST, accent: 'slime' },
-    { id: 'pong', name: 'Pong', emoji: '🏓', desc: 'Move your paddle. Hit power-ups. First to 6 wins.', cost: STARCADE_GAME_COST, accent: 'pong' },
+    { id: 'pong', name: 'Pong', emoji: '🏓', desc: 'Move your paddle. Hit power-ups. First to 3 wins.', cost: STARCADE_GAME_COST, accent: 'pong' },
+    { id: 'brickbreaker', name: 'Brick Breaker', emoji: '🧱', desc: 'Break the brick wall. Catch power-ups. 3 lives to clear every block.', cost: STARCADE_GAME_COST, accent: 'brickbreaker' },
+    { id: 'snake', name: 'Snake', emoji: '🐍', desc: 'Eat words and sounds to grow. Wrap around the edges. Don\'t bite yourself!', cost: STARCADE_GAME_COST, accent: 'snake' },
   ];
   const cards = games.map(g => {
     const canAfford = points >= g.cost;
@@ -5954,7 +9147,7 @@ function renderArcadeMenu(app) {
     <div class="min-h-screen p-4 md:p-8">
       <div class="max-w-5xl mx-auto">
         <div class="flex justify-between items-center mb-6">
-          <button onclick="sfxClick(); state.view='profile'; render()" class="text-white/70 hover:text-white text-sm">← Back to my page</button>
+          <button onclick="sfxClick(); backToStudentMenu()" class="text-white/70 hover:text-white text-sm">← Back to menu</button>
           <span class="bg-yellow-400/20 px-4 py-2 rounded-full font-bold">⭐ ${points} stars</span>
         </div>
         <h1 class="text-3xl md:text-4xl font-bold text-center mb-2 arcade-title-friendly">🌟 The Starcade</h1>
@@ -5979,23 +9172,11 @@ window.launchArcadeGame = (gameId, cost) => {
 
 window.exitArcadeGame = () => {
   sfxClick();
-  if (window._pongParentPointer) {
-    window.removeEventListener('mousemove', window._pongParentPointer);
-    window.removeEventListener('pointermove', window._pongParentPointer);
-    window._pongParentPointer = null;
-  }
-  if (window._pongWinHandler) {
-    window.removeEventListener('message', window._pongWinHandler);
-    window._pongWinHandler = null;
-  }
-  if (window._treasureHandler) {
-    window.removeEventListener('message', window._treasureHandler);
-    window._treasureHandler = null;
-  }
   if (state.arcadeFromBoard) {
     returnToBoardFromArcade();
     return;
   }
+  teardownArcadeBoardSession();
   state.arcadeGame = 'menu';
   render();
 };
@@ -6023,12 +9204,29 @@ function getArcadeEndSummary(gameId, a) {
     const detail = (a.score || 0) > TREASURE_SCORE_BONUS_THRESHOLD ? `+${STARCADE_WIN_BONUS} bonus stars` : '';
     return { title, statLine: `Score: ${a.score || 0}`, detail };
   }
+  if (gameId === 'pong') {
+    const title = a.winner === 'player' ? 'You won!' : 'You lost';
+    const detail = a.winner === 'player' ? `+${STARCADE_WIN_BONUS} bonus stars` : '';
+    return { title, statLine: '', detail };
+  }
+  if (gameId === 'brickbreaker') {
+    const title = a.won ? 'You won!' : 'Game over';
+    const detail = a.won ? `+${STARCADE_WIN_BONUS} bonus stars` : '';
+    return { title, statLine: a.won ? 'All bricks cleared!' : '', detail };
+  }
+  if (gameId === 'snake') {
+    const title = 'Game over';
+    const detail = (a.score || 0) >= 500 ? `+${STARCADE_WIN_BONUS} bonus stars` : '';
+    return { title, statLine: `Score: ${a.score || 0}`, detail };
+  }
   return { title: 'Game over', statLine: '', detail: '' };
 }
 
 function renderArcadeFinishedDock(gameId) {
   if (state.arcadeFromBoard) {
-    return `<button type="button" onclick="showBoardReturnOkPrompt()" class="board-game-prompt-go" style="font-size:1rem;padding:0.65rem 1.75rem">OK</button>`;
+    return `<div class="game-end-board-celebrate mb-2" aria-hidden="true">🎉✨🌟</div>
+      <p class="arcade-instructions text-white/90 text-sm mb-3">Good try! Practice makes progress!</p>
+      <button type="button" onclick="showBoardReturnOkPrompt()" class="board-game-prompt-go" style="font-size:1rem;padding:0.65rem 1.75rem">OK</button>`;
   }
   const a = state.arcade;
   const points = getPoints(state.selectedStudent);
@@ -6054,13 +9252,91 @@ function renderArcadeFinishedDock(gameId) {
 // ============================================================
 // PONG (embedded canvas game)
 // ============================================================
+function arcadeCanvasExitLabel() {
+  return state.arcadeFromBoard ? 'Board' : 'Starcade';
+}
+
+function buildArcadeCanvasShellMarkup(frameId, frameSrc, frameTitle, dockHtml) {
+  const exitLabel = arcadeCanvasExitLabel();
+  return `
+    <div class="arcade-canvas-shell" id="arcadeCanvasShell">
+      <div class="arcade-canvas-stage flex flex-col">
+        <div class="arcade-canvas-toolbar">
+          <button type="button" onclick="exitArcadeGame()" class="arcade-pong-exit">← ${exitLabel}</button>
+          <button type="button" onclick="toggleArcadeCanvasFullscreen()" class="arcade-canvas-fullscreen-btn" title="Toggle fullscreen" aria-label="Toggle fullscreen" aria-pressed="false">⛶</button>
+        </div>
+        <iframe id="${frameId}" src="${frameSrc}" class="arcade-pong-frame flex-1 w-full" title="${frameTitle}" allow="autoplay"></iframe>
+      </div>
+      ${dockHtml ? `<div class="arcade-play-dock arcade-pong-status text-center flex gap-2 justify-center flex-wrap items-center">${dockHtml}</div>` : ''}
+    </div>`;
+}
+
+function getArcadeCanvasShell() {
+  return document.getElementById('arcadeCanvasShell');
+}
+
+function requestArcadeCanvasFullscreen() {
+  const shell = getArcadeCanvasShell();
+  if (!shell) return;
+  const active = document.fullscreenElement || document.webkitFullscreenElement;
+  if (active === shell) return;
+  const fn = shell.requestFullscreen || shell.webkitRequestFullscreen;
+  if (fn) fn.call(shell).catch(() => {});
+}
+
+function exitArcadeCanvasFullscreen() {
+  const active = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!active) return;
+  const fn = document.exitFullscreen || document.webkitExitFullscreen;
+  if (fn) fn.call(document).catch(() => {});
+}
+
+window.toggleArcadeCanvasFullscreen = () => {
+  const shell = getArcadeCanvasShell();
+  if (!shell) return;
+  const active = document.fullscreenElement || document.webkitFullscreenElement;
+  if (active === shell) exitArcadeCanvasFullscreen();
+  else requestArcadeCanvasFullscreen();
+};
+
+function mountArcadeCanvasShell() {
+  const shell = getArcadeCanvasShell();
+  if (!shell) return;
+  document.body.classList.add('arcade-canvas-active');
+  if (!window._arcadeCanvasOnFsChange) {
+    window._arcadeCanvasOnFsChange = () => {
+      const s = getArcadeCanvasShell();
+      const btn = s?.querySelector('.arcade-canvas-fullscreen-btn');
+      if (!btn) return;
+      const on = (document.fullscreenElement || document.webkitFullscreenElement) === s;
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    };
+    document.addEventListener('fullscreenchange', window._arcadeCanvasOnFsChange);
+    document.addEventListener('webkitfullscreenchange', window._arcadeCanvasOnFsChange);
+  }
+  if (!state.arcade?.finished) {
+    requestArcadeCanvasFullscreen();
+    requestAnimationFrame(() => requestArcadeCanvasFullscreen());
+  }
+}
+
+function teardownArcadeCanvasShell() {
+  document.body.classList.remove('arcade-canvas-active');
+  exitArcadeCanvasFullscreen();
+  if (window._arcadeCanvasOnFsChange) {
+    document.removeEventListener('fullscreenchange', window._arcadeCanvasOnFsChange);
+    document.removeEventListener('webkitfullscreenchange', window._arcadeCanvasOnFsChange);
+    window._arcadeCanvasOnFsChange = null;
+  }
+}
+
 function sendPongFocusWords() {
   const frame = document.getElementById('pongFrame');
   if (!frame || !frame.contentWindow) return;
   try {
     frame.contentWindow.postMessage({
       type: 'pong-focus-words',
-      words: getFocusItems(state.selectedStudent)
+      words: enrichArcadeFocusItems(getFocusItems(state.selectedStudent))
     }, '*');
   } catch (e) {}
 }
@@ -6071,18 +9347,42 @@ function renderPong(app) {
   }
   window._pongWinHandler = (e) => {
     if (!e.data || !e.data.type) return;
-    if (e.data.type === 'pong-win') { confetti(); awardStarcadeWinBonus('pong-win'); }
-    if (e.data.type === 'pong-speak' && e.data.word) speak(e.data.word);
+    if (e.data.type === 'pong-game-over') {
+      if (!state.arcade) state.arcade = { finished: false, endPopupReady: false };
+      state.arcade.finished = true;
+      state.arcade.winner = e.data.won ? 'player' : 'ai';
+      state.arcade.endPopupReady = false;
+      if (e.data.won) {
+        confetti();
+        awardStarcadeWinBonus('pong-win');
+      }
+      scheduleArcadeEndPopup();
+      render();
+    }
+    if (e.data.type === 'pong-speak') {
+      if (e.data.item) arcadeSpeakFocusItem(e.data.item);
+      else if (e.data.word) speak(e.data.word);
+    }
     if (e.data.type === 'pong-ready') sendPongFocusWords();
   };
   window.addEventListener('message', window._pongWinHandler);
 
-  app.innerHTML = `
-    <div class="arcade-screen arcade-screen--pong flex flex-col">
-      <button type="button" onclick="exitArcadeGame()" class="arcade-pong-exit">← Starcade</button>
-      <iframe id="pongFrame" src="../HTML games/PONG.html?embed=1" class="arcade-pong-frame flex-1 w-full" title="Pong game" allow="autoplay"></iframe>
-    </div>`;
+  const a = state.arcade;
+  const fromBoard = state.arcadeFromBoard;
+  const dockHtml = (a && a.finished && a.endPopupReady)
+    ? (fromBoard
+      ? `<button type="button" onclick="showBoardReturnOkPrompt()" class="board-game-prompt-go" style="font-size:0.95rem;padding:0.55rem 1.5rem">OK</button>`
+      : renderArcadeFinishedDock('pong'))
+    : '';
 
+  app.innerHTML = buildArcadeCanvasShellMarkup(
+    'pongFrame',
+    getHtmlGameEmbedUrl('PONG.html'),
+    'Pong game',
+    dockHtml
+  );
+
+  mountArcadeCanvasShell();
   const frame = document.getElementById('pongFrame');
   if (frame) frame.onload = () => sendPongFocusWords();
 
@@ -6109,13 +9409,150 @@ function renderPong(app) {
 }
 
 // ============================================================
+// BRICK BREAKER (embedded canvas game)
+// ============================================================
+const BRICKBREAKER_BRICK_COUNT = 51;
+
+function sendBrickBreakerFocusWords() {
+  const frame = document.getElementById('brickBreakerFrame');
+  if (!frame || !frame.contentWindow) return;
+  try {
+    frame.contentWindow.postMessage({
+      type: 'brickbreaker-focus-words',
+      words: enrichArcadeFocusItems(assignFocusItems(BRICKBREAKER_BRICK_COUNT))
+    }, '*');
+  } catch (e) {}
+}
+
+function renderBrickBreaker(app) {
+  if (window._brickBreakerHandler) {
+    window.removeEventListener('message', window._brickBreakerHandler);
+  }
+  window._brickBreakerHandler = (e) => {
+    if (!e.data || !e.data.type) return;
+    if (e.data.type === 'brickbreaker-game-over') {
+      if (!state.arcade) state.arcade = { finished: false, endPopupReady: false };
+      state.arcade.finished = true;
+      state.arcade.won = !!e.data.won;
+      state.arcade.endPopupReady = false;
+      if (e.data.won) {
+        confetti();
+        awardStarcadeWinBonus('brickbreaker-win');
+      }
+      scheduleArcadeEndPopup();
+      render();
+    }
+    if (e.data.type === 'brickbreaker-speak') arcadeSpeakFocusItem(e.data.item);
+    if (e.data.type === 'brickbreaker-ready') sendBrickBreakerFocusWords();
+  };
+  window.addEventListener('message', window._brickBreakerHandler);
+
+  const a = state.arcade;
+  const fromBoard = state.arcadeFromBoard;
+  const dockHtml = (a && a.finished && a.endPopupReady)
+    ? (fromBoard
+      ? `<button type="button" onclick="showBoardReturnOkPrompt()" class="board-game-prompt-go" style="font-size:0.95rem;padding:0.55rem 1.5rem">OK</button>`
+      : renderArcadeFinishedDock('brickbreaker'))
+    : '';
+
+  app.innerHTML = buildArcadeCanvasShellMarkup(
+    'brickBreakerFrame',
+    getHtmlGameEmbedUrl('BRICKBREAKER.html'),
+    'Brick Breaker game',
+    dockHtml
+  );
+
+  mountArcadeCanvasShell();
+  const frame = document.getElementById('brickBreakerFrame');
+  if (frame) frame.onload = () => sendBrickBreakerFocusWords();
+
+  if (window._brickBreakerParentPointer) {
+    window.removeEventListener('mousemove', window._brickBreakerParentPointer);
+    window.removeEventListener('pointermove', window._brickBreakerParentPointer);
+  }
+  window._brickBreakerParentPointer = (e) => {
+    if (state.arcadeGame !== 'brickbreaker') return;
+    const brickFrame = document.getElementById('brickBreakerFrame');
+    if (!brickFrame?.contentWindow) return;
+    const rect = brickFrame.getBoundingClientRect();
+    try {
+      brickFrame.contentWindow.postMessage({
+        type: 'brickbreaker-pointer-x',
+        clientX: e.clientX,
+        frameLeft: rect.left,
+        frameWidth: rect.width
+      }, '*');
+    } catch (err) {}
+  };
+  window.addEventListener('mousemove', window._brickBreakerParentPointer, { passive: true });
+  window.addEventListener('pointermove', window._brickBreakerParentPointer, { passive: true });
+}
+
+// ============================================================
+// SNAKE (embedded canvas game)
+// ============================================================
+function sendSnakeFocusWords() {
+  const frame = document.getElementById('snakeFrame');
+  if (!frame || !frame.contentWindow) return;
+  try {
+    frame.contentWindow.postMessage({
+      type: 'snake-focus-words',
+      words: enrichArcadeFocusItems(assignFocusItems(50))
+    }, '*');
+  } catch (e) {}
+}
+
+function renderSnake(app) {
+  if (window._snakeHandler) {
+    window.removeEventListener('message', window._snakeHandler);
+  }
+  window._snakeHandler = (e) => {
+    if (!e.data || !e.data.type) return;
+    if (e.data.type === 'snake-game-over') {
+      if (!state.arcade) state.arcade = { finished: false, endPopupReady: false };
+      state.arcade.finished = true;
+      state.arcade.score = typeof e.data.score === 'number' ? e.data.score : 0;
+      state.arcade.endPopupReady = false;
+      if (state.arcade.score >= 500) {
+        confetti();
+        awardStarcadeWinBonus('snake-score');
+      }
+      scheduleArcadeEndPopup();
+      render();
+    }
+    if (e.data.type === 'snake-speak') arcadeSpeakFocusItem(e.data.item);
+    if (e.data.type === 'snake-ready') sendSnakeFocusWords();
+  };
+  window.addEventListener('message', window._snakeHandler);
+
+  const a = state.arcade;
+  const fromBoard = state.arcadeFromBoard;
+  const dockHtml = (a && a.finished && a.endPopupReady)
+    ? (fromBoard
+      ? `<button type="button" onclick="showBoardReturnOkPrompt()" class="board-game-prompt-go" style="font-size:0.95rem;padding:0.55rem 1.5rem">OK</button>`
+      : renderArcadeFinishedDock('snake'))
+    : '';
+
+  app.innerHTML = buildArcadeCanvasShellMarkup(
+    'snakeFrame',
+    getHtmlGameEmbedUrl('SNAKE.html'),
+    'Snake game',
+    dockHtml
+  );
+
+  mountArcadeCanvasShell();
+  const frame = document.getElementById('snakeFrame');
+  if (frame) frame.onload = () => sendSnakeFocusWords();
+}
+
+// ============================================================
 // TIC-TAC-TOE
 // ============================================================
 window.tttMove = (idx) => {
   const a = state.arcade;
   if (a.finished || a.board[idx] || !a.playerTurn) return;
   sfxClick();
-  if (a.cellItems[idx]) speak(a.cellItems[idx].value);
+  if (a.cellItems[idx]) arcadeSpeakFocusItem(a.cellItems[idx]);
 
   a.board[idx] = 'X';
   a.playerTurn = false;
@@ -6132,7 +9569,7 @@ window.tttMove = (idx) => {
     const aiMove = tttAIMove(a.board);
     if (aiMove !== -1) {
       a.board[aiMove] = 'O';
-      if (a.cellItems[aiMove]) speak(a.cellItems[aiMove].value);
+      if (a.cellItems[aiMove]) arcadeSpeakFocusItem(a.cellItems[aiMove]);
     }
     const w2 = tttCheckWin(a.board);
     if (w2 || !a.board.includes(null)) {
@@ -6181,7 +9618,7 @@ function renderTTT(app) {
     const inWinLine = a.winLine && a.winLine.includes(i);
     const item = a.cellItems[i];
     const itemType = item.type;
-    const itemValue = item.value;
+    const itemLabel = arcadeItemLabel(item);
     const highlight = inWinLine ? 'ring-4 ring-yellow-400 bg-yellow-400/30' : (cell ? 'bg-white/20' : 'bg-white/10 hover:bg-white/25');
     const disabled = a.finished || cell || !a.playerTurn;
 
@@ -6189,18 +9626,18 @@ function renderTTT(app) {
     if (cell === 'X') {
       content = `<div class="relative flex flex-col items-center justify-center">
         <span class="text-4xl md:text-5xl text-pink-300 font-bold leading-none">✕</span>
-        <span class="text-xs md:text-sm text-white/80 mt-1">${itemValue}</span>
+        <span class="text-xs md:text-sm text-white/80 mt-1">${itemLabel}</span>
       </div>`;
     } else if (cell === 'O') {
       content = `<div class="relative flex flex-col items-center justify-center">
         <span class="text-4xl md:text-5xl text-cyan-300 font-bold leading-none">○</span>
-        <span class="text-xs md:text-sm text-white/80 mt-1">${itemValue}</span>
+        <span class="text-xs md:text-sm text-white/80 mt-1">${itemLabel}</span>
       </div>`;
     } else {
       const colorClass = itemType === 'gpc' ? 'text-cyan-200' : 'text-pink-200';
-      content = `<span class="${colorClass} text-3xl md:text-4xl font-bold">${itemValue}</span>`;
+      content = `<span class="${colorClass} text-3xl md:text-4xl font-bold">${itemLabel}</span>`;
     }
-    return `<button onclick="tttMove(${i})" ${disabled ? 'disabled' : ''} class="aspect-square min-h-[4.5rem] sm:min-h-[5.5rem] ${highlight} disabled:hover:bg-white/20 rounded-2xl flex items-center justify-center transition shadow-lg" title="${itemValue}">${content}</button>`;
+    return `<button onclick="tttMove(${i})" ${disabled ? 'disabled' : ''} class="aspect-square min-h-[4.5rem] sm:min-h-[5.5rem] ${highlight} disabled:hover:bg-white/20 rounded-2xl flex items-center justify-center transition shadow-lg" title="${itemLabel}">${content}</button>`;
   }).join('');
 
   app.innerHTML = `
@@ -6308,14 +9745,14 @@ window.c4Drop = (col) => {
   const row = c4DropRow(a.board, col);
   if (row === -1) return;
   sfxClick();
-  if (a.cellItems[row] && a.cellItems[row][col]) speak(a.cellItems[row][col].value);
+  if (a.cellItems[row] && a.cellItems[row][col]) arcadeSpeakFocusItem(a.cellItems[row][col]);
 
   a.board[row][col] = 'X';
   a.lastMove = [row, col];
   a.playerTurn = false;
   const win = c4CheckWin(a.board, 'X');
-  if (win) { a.winner = 'X'; a.winCells = win; a.finished = true; setTimeout(()=>{ confetti(); }, 400); awardStarcadeWinBonus('c4-win'); render(); maybeShowBoardArcadeReturnPrompt(); return; }
-  if (c4BoardFull(a.board)) { a.finished = true; render(); maybeShowBoardArcadeReturnPrompt(); return; }
+  if (win) { a.winner = 'X'; a.winCells = win; a.finished = true; a.endPopupReady = false; setTimeout(()=>{ confetti(); }, 400); awardStarcadeWinBonus('c4-win'); render(); scheduleArcadeEndPopup(); return; }
+  if (c4BoardFull(a.board)) { a.finished = true; a.endPopupReady = true; render(); maybeShowBoardArcadeReturnPrompt(); return; }
   render();
   setTimeout(() => {
     const aiCol = c4AIMove(a.board);
@@ -6323,13 +9760,14 @@ window.c4Drop = (col) => {
     const aiRow = c4DropRow(a.board, aiCol);
     a.board[aiRow][aiCol] = 'O';
     a.lastMove = [aiRow, aiCol];
-    if (a.cellItems[aiRow] && a.cellItems[aiRow][aiCol]) speak(a.cellItems[aiRow][aiCol].value);
+    if (a.cellItems[aiRow] && a.cellItems[aiRow][aiCol]) arcadeSpeakFocusItem(a.cellItems[aiRow][aiCol]);
     const win2 = c4CheckWin(a.board, 'O');
-    if (win2) { a.winner = 'O'; a.winCells = win2; a.finished = true; }
-    else if (c4BoardFull(a.board)) { a.finished = true; }
+    if (win2) { a.winner = 'O'; a.winCells = win2; a.finished = true; a.endPopupReady = false; }
+    else if (c4BoardFull(a.board)) { a.finished = true; a.endPopupReady = true; }
     a.playerTurn = true;
     render();
-    if (a.finished) maybeShowBoardArcadeReturnPrompt();
+    if (a.finished && a.winner && a.winCells) scheduleArcadeEndPopup();
+    else if (a.finished && a.endPopupReady) maybeShowBoardArcadeReturnPrompt();
   }, 2000);
 };
 
@@ -6356,13 +9794,13 @@ function renderC4(app) {
       const isWin = a.winCells && a.winCells.some(([wr, wc]) => wr === r && wc === c);
       const isLast = a.lastMove && a.lastMove[0] === r && a.lastMove[1] === c;
       const item = a.cellItems[r][c];
-      const label = item ? item.value : '';
+      const label = item ? arcadeItemLabel(item) : '';
       let inner = '';
       if (v === 'X') {
-        const pc = isWin ? 'bg-gradient-to-br from-yellow-300 to-red-500 ring-2 ring-yellow-300' : 'bg-gradient-to-br from-red-400 to-red-600';
+        const pc = isWin ? 'bg-gradient-to-br from-yellow-300 to-red-500 ring-4 ring-yellow-300 scale-105' : 'bg-gradient-to-br from-red-400 to-red-600';
         inner = `<div class="w-full h-full rounded-full ${pc} shadow-md ${isLast ? 'drop-anim' : ''} flex items-center justify-center text-white font-bold arcade-c4-piece-label px-0.5 text-center">${label}</div>`;
       } else if (v === 'O') {
-        const pc = isWin ? 'bg-gradient-to-br from-yellow-300 to-amber-500 ring-2 ring-yellow-300' : 'bg-gradient-to-br from-yellow-300 to-yellow-500';
+        const pc = isWin ? 'bg-gradient-to-br from-yellow-300 to-amber-500 ring-4 ring-yellow-300 scale-105' : 'bg-gradient-to-br from-yellow-300 to-yellow-500';
         inner = `<div class="w-full h-full rounded-full ${pc} shadow-md ${isLast ? 'drop-anim' : ''} flex items-center justify-center text-blue-900 font-bold arcade-c4-piece-label px-0.5 text-center">${label}</div>`;
       } else {
         inner = `<div class="w-full h-full rounded-full bg-blue-950/80 shadow-inner flex items-center justify-center text-white/50 font-semibold arcade-c4-piece-label arcade-c4-piece-label--ghost px-0.5 text-center">${label}</div>`;
@@ -6399,9 +9837,10 @@ function renderC4(app) {
         </div>
 
         <div class="arcade-play-dock arcade-c4-status text-center">
-          ${resultMessage ? `<div class="arcade-toast">${resultMessage}</div>` : ''}
-          ${a.finished ? renderArcadeFinishedDock('c4')
-          : `<p class="arcade-instructions text-white/85 text-sm">${turnStatus}</p>`}
+          ${resultMessage && a.endPopupReady ? `<div class="arcade-toast">${resultMessage}</div>` : ''}
+          ${a.finished && a.endPopupReady ? renderArcadeFinishedDock('c4')
+          : (a.finished && a.winner ? `<p class="arcade-instructions text-white/85 text-sm">Nice line!</p>`
+          : `<p class="arcade-instructions text-white/85 text-sm">${turnStatus}</p>`)}
         </div>
       </div>
     </div>`;
@@ -6416,7 +9855,7 @@ function sendTreasureFocusWords() {
   try {
     frame.contentWindow.postMessage({
       type: 'treasure-focus-words',
-      words: getFocusItems(state.selectedStudent)
+      words: enrichArcadeFocusItems(getFocusItems(state.selectedStudent))
     }, '*');
   } catch (e) {}
 }
@@ -6454,7 +9893,10 @@ function renderTreasureHunter(app) {
       if (state.arcadeFromBoard) maybeShowBoardArcadeReturnPrompt();
       else render();
     }
-    if (e.data.type === 'treasure-speak' && e.data.word) speak(e.data.word);
+    if (e.data.type === 'treasure-speak') {
+      if (e.data.item) arcadeSpeakFocusItem(e.data.item);
+      else if (e.data.word) speak(e.data.word);
+    }
     if (e.data.type === 'treasure-ready') sendTreasureFocusWords();
   };
   window.addEventListener('message', window._treasureHandler);
@@ -6481,7 +9923,7 @@ function renderTreasureHunter(app) {
         </div>
 
         <div class="arcade-playfield arcade-board-area">
-          <iframe id="treasureFrame" src="../HTML games/TreasureHunter.html?embed=1" class="arcade-treasure-frame w-full h-full" title="Treasure Hunter game" allow="autoplay"></iframe>
+          <iframe id="treasureFrame" src="${getHtmlGameEmbedUrl('TreasureHunter.html')}" class="arcade-treasure-frame w-full h-full" title="Treasure Hunter game" allow="autoplay"></iframe>
         </div>
 
         <div class="arcade-play-dock arcade-treasure-status text-center flex gap-2 justify-center flex-wrap items-center">
