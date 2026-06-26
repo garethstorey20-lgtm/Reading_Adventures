@@ -44,6 +44,26 @@
 
 
 
+  function pilotBannerShouldHide() {
+
+    if (window.DrivePilot._bannerHidden) return true;
+
+    try {
+
+      if (window.state?.data?.classes && Object.keys(window.state.data.classes).length > 0) return true;
+
+    } catch (e) {
+
+      /* ignore */
+
+    }
+
+    return false;
+
+  }
+
+
+
   async function applyClassDataText(text) {
 
     const data = JSON.parse(text);
@@ -79,6 +99,8 @@
     }
 
     window.DrivePilot._loadedFromDrive = true;
+
+    if (window.DrivePilot.hideBanner) window.DrivePilot.hideBanner();
 
     if (typeof render === "function") render();
 
@@ -520,7 +542,8 @@
 
       patchRenderForDrive();
 
-      this.showBanner();
+      if (!pilotBannerShouldHide()) this.showBanner();
+
       if (hasDriveContext()) {
 
         showLoadingScreen();
@@ -607,6 +630,16 @@
 
       if (!el) return;
 
+      if (pilotBannerShouldHide()) {
+
+        this.hideBanner();
+
+        return;
+
+      }
+
+      document.body.classList.add("pilot-banner-visible");
+
       const tenant = window.TenantRegistry?.tenantFromUrl();
 
       const fileId = window.DrivePilotLoader?.fileIdFromUrl();
@@ -633,13 +666,29 @@
 
     },
 
+
+
+    hideBanner() {
+
+      window.DrivePilot._bannerHidden = true;
+
+      const el = document.getElementById("drive-pilot-banner");
+
+      if (el) el.style.display = "none";
+
+      document.body.classList.remove("pilot-banner-visible");
+
+      document.body.classList.add("pilot-app-ready");
+
+    },
+
   };
 
 
 
   document.addEventListener("DOMContentLoaded", function () {
 
-    window.DrivePilot.showBanner();
+    if (!window.DrivePilot._bannerHidden) window.DrivePilot.showBanner();
 
   });
 

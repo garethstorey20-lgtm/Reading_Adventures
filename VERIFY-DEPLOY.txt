@@ -1,0 +1,12 @@
+VERIFY THIS BUILD BEFORE UPLOADING TO GITHUB
+============================================
+
+OK    web-pilot/index.html  (pilot-app-ready)
+OK    web-pilot/js/app.js  (signpost-scaler)
+OK    web-pilot/js/app.js  (hideBanner)
+OK    web-pilot/js/pilot-bootstrap.js  (pilot-app-ready)
+OK    web-pilot/css/app.css  (signpost-scaler)
+
+Built: 2026-06-26T03:44:03.976Z
+
+Upload everything in this folder to GitHub repo Reading_Adventures.

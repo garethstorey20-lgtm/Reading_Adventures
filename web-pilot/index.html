@@ -21,10 +21,12 @@
     border-bottom: 1px solid #fcd34d;
   }
   #drive-pilot-banner.banner-error { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-  body { padding-top: 1.75rem; }
+  body.pilot-banner-visible { padding-top: 1.75rem; }
+  body.pilot-app-ready #drive-pilot-banner { display: none !important; }
+  body.pilot-app-ready { padding-top: 0 !important; }
 </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-fuchsia-900 text-white">
+<body class="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-fuchsia-900 text-white pilot-banner-visible">
 <div id="drive-pilot-banner">Reading Adventures web — loading…</div>
 <div id="stars" class="fixed inset-0 pointer-events-none overflow-hidden no-print"></div>
 <div id="app" class="relative z-10"></div>
@@ -54,7 +56,7 @@
     showDeployError("pilot-bootstrap.js did not load. Re-upload web-pilot/js/ from reading-adventures-web.");
     return;
   }
-  if (window.DrivePilot.showBanner) window.DrivePilot.showBanner();
+  if (window.DrivePilot.showBanner && !window.DrivePilot._bannerHidden) window.DrivePilot.showBanner();
 })();
 </script>
 </body>

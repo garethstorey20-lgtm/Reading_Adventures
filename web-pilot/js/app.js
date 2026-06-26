@@ -1168,15 +1168,8 @@ function gpcProfileLabel(item) {
   return ex ? `${g} · ${ex}` : g;
 }
 
-function formatGpcOptionLabel(poolKey, allKeys) {
-  const { phoneme, exampleWord } = parseGpcStorageKey(poolKey);
-  const dupes = (allKeys || []).filter(k =>
-    gpcDisplayPhoneme(k).toLowerCase() === phoneme.toLowerCase()
-  );
-  if (dupes.length > 1 && exampleWord) {
-    return `${escapeHtmlText(phoneme)}<span class="text-base opacity-80 font-semibold"> · ${escapeHtmlText(exampleWord)}</span>`;
-  }
-  return escapeHtmlText(phoneme);
+function formatGpcOptionLabel(poolKey) {
+  return escapeHtmlText(gpcDisplayPhoneme(poolKey));
 }
 
 function findGpcNeedItem(gpc, needs, exampleWord) {
@@ -3092,6 +3085,7 @@ function abandonBoardActivityAndEndTurn(name, isTagMe) {
 }
 
 function teardownArcadeBoardSession() {
+  setArcadeLandscapeMode(false);
   teardownArcadeCanvasShell();
   if (window._pongParentPointer) {
     window.removeEventListener('mousemove', window._pongParentPointer);
@@ -3346,6 +3340,7 @@ function loadFile(file){
       state.studentPoints = {};
       state.flashResults = {};
       state.view = 'classSelect';
+      if (window.DrivePilot?.hideBanner) window.DrivePilot.hideBanner();
       render();
     } catch(err) {
       $('uploadMsg').textContent = 'Could not read file: ' + err.message;
@@ -4083,6 +4078,7 @@ window.launchArcadeFromBoard = (gameId) => {
   initArcadeGameState(gameId);
   state.arcadeFromBoard = true;
   state.view = 'arcade';
+  setArcadeLandscapeMode(true);
   render();
 };
 
@@ -4450,14 +4446,16 @@ function renderProfile(app) {
           <span class="student-menu-cloud student-menu-cloud--3"></span>
           <span class="student-menu-cloud student-menu-cloud--4"></span>
         </div>
-        <nav class="signpost" aria-label="Choose where to go">
-          <div class="signpost-col signpost-col--left">${leftSigns}</div>
-          <div class="signpost-pole-col" aria-hidden="true">
-            <div class="signpost-pole-cap"></div>
-            <div class="signpost-pole"></div>
-          </div>
-          <div class="signpost-col signpost-col--right">${rightSigns}</div>
-        </nav>
+        <div class="signpost-scaler">
+          <nav class="signpost" aria-label="Choose where to go">
+            <div class="signpost-col signpost-col--left">${leftSigns}</div>
+            <div class="signpost-pole-col" aria-hidden="true">
+              <div class="signpost-pole-cap"></div>
+              <div class="signpost-pole"></div>
+            </div>
+            <div class="signpost-col signpost-col--right">${rightSigns}</div>
+          </nav>
+        </div>
       </main>
     </div>`;
 }
@@ -6087,6 +6085,7 @@ function renderWordFocus(app) {
 }
 
 window.openArcadeMenu = () => {
+  setArcadeLandscapeMode(false);
   state.arcadeGame = 'menu';
   state.view = 'arcade';
   render();
@@ -9157,6 +9156,10 @@ function renderArcadeMenu(app) {
     </div>`;
 }
 
+function setArcadeLandscapeMode(active) {
+  document.body.classList.toggle('arcade-landscape-active', !!active);
+}
+
 window.launchArcadeGame = (gameId, cost) => {
   sfxClick();
   const name = state.selectedStudent;
@@ -9167,11 +9170,13 @@ window.launchArcadeGame = (gameId, cost) => {
   state.arcadeFromBoard = false;
   initArcadeGameState(gameId);
   state.view = 'arcade';
+  setArcadeLandscapeMode(true);
   render();
 };
 
 window.exitArcadeGame = () => {
   sfxClick();
+  setArcadeLandscapeMode(false);
   if (state.arcadeFromBoard) {
     returnToBoardFromArcade();
     return;
@@ -9641,7 +9646,7 @@ function renderTTT(app) {
   }).join('');
 
   app.innerHTML = `
-    <div class="arcade-screen p-1 sm:p-2 flex flex-col">
+    <div class="arcade-screen arcade-screen--landscape-lock p-1 sm:p-2 flex flex-col">
       <div class="arcade-wrap max-w-2xl mx-auto w-full arcade-play-shell">
         <div class="arcade-play-chrome">
           <div class="flex justify-between items-center mb-0.5">
@@ -9814,7 +9819,7 @@ function renderC4(app) {
     : 'Wait. The computer is playing...');
 
   app.innerHTML = `
-    <div class="arcade-screen p-1 sm:p-2 flex flex-col">
+    <div class="arcade-screen arcade-screen--landscape-lock p-1 sm:p-2 flex flex-col">
       <div class="arcade-wrap arcade-c4-wrap max-w-5xl mx-auto w-full arcade-play-shell">
         <div class="arcade-play-chrome">
           <div class="flex justify-between items-center mb-0.5">
@@ -9909,7 +9914,7 @@ function renderTreasureHunter(app) {
       : `<p class="arcade-instructions text-white/85 text-sm">Tap tiles to hear words and find the treasure.</p>`;
 
   app.innerHTML = `
-    <div class="arcade-screen p-1 sm:p-2 flex flex-col">
+    <div class="arcade-screen arcade-screen--landscape-lock p-1 sm:p-2 flex flex-col">
       <div class="arcade-wrap arcade-treasure-wrap max-w-5xl mx-auto w-full arcade-play-shell">
         <div class="arcade-play-chrome">
           <div class="flex justify-between items-center mb-0.5">
