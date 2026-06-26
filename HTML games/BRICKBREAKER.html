@@ -174,6 +174,7 @@
         <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>Green: wide paddle</div>
         <div class="legend-item"><span class="legend-dot" style="background:#a855f7"></span>Purple: +1 life</div>
         <div class="legend-item"><span class="legend-dot" style="background:#f97316"></span>Orange: sticky ball</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#38bdf8"></span>Light blue: +25% ball speed</div>
       </div>
       <button id="startBtn">START GAME</button>
     </div>
@@ -201,7 +202,7 @@
   const W = 800, H = 500;
   const PADDLE_W = 100, PADDLE_H = 14;
   const BALL_SIZE = 12;
-  const BASE_SPEED = 5;
+  const BASE_SPEED = 3.75;
   const MAX_BALLS = 8;
   const ROWS = 6;
   const BRICK_H = 22;
@@ -209,8 +210,8 @@
   const WALL_TOP = 48;
   const LEVELS_TO_WIN = 2;
   const BRICK_COLORS = ['#ff4757', '#2ed573', '#1e90ff'];
-  const BONUS_TYPES = ['red', 'blue', 'yellow', 'green', 'purple', 'orange'];
-  const BONUS_SYMBOL = { red: '💥', blue: '③', yellow: '⚡', green: '↔', purple: '♥', orange: '🧲' };
+  const BONUS_TYPES = ['red', 'blue', 'yellow', 'green', 'purple', 'orange', 'speed'];
+  const BONUS_SYMBOL = { red: '💥', blue: '③', yellow: '⚡', green: '↔', purple: '♥', orange: '🧲', speed: '🏎' };
 
   let focusWords = [];
   let bricks = [];
@@ -231,6 +232,7 @@
   let activeEffects = { explode: false, pierceUntil: 0 };
   let slowUntil = 0;
   let widenUntil = 0;
+  let speedBoostStacks = 0;
   let audioCtx = null;
 
   function resize() {
@@ -399,6 +401,7 @@
     activeEffects = { explode: false, pierceUntil: 0 };
     slowUntil = 0;
     widenUntil = 0;
+    speedBoostStacks = 0;
     stickyReady = false;
     paddle.baseW = PADDLE_W;
     paddle.w = PADDLE_W;
@@ -464,8 +467,9 @@
 
   function getBallSpeed() {
     const now = performance.now();
-    if (slowUntil > now) return BASE_SPEED * 0.45;
-    return BASE_SPEED;
+    let speed = BASE_SPEED * (1 + speedBoostStacks * 0.25);
+    if (slowUntil > now) return speed * 0.45;
+    return speed;
   }
 
   function normalizeBallSpeed(ball) {
@@ -612,6 +616,10 @@
     } else if (type === 'orange') {
       stickyReady = true;
       beep(300, 0.1, 'sawtooth', 0.14);
+    } else if (type === 'speed') {
+      speedBoostStacks = Math.min(speedBoostStacks + 1, 8);
+      for (const b of balls) normalizeBallSpeed(b);
+      beep(620, 0.12, 'triangle', 0.18);
     }
   }
 
@@ -750,7 +758,7 @@
     updateStats();
   }
 
-  const BONUS_DROP_COLORS = { red: '#ff3355', blue: '#33aaff', yellow: '#ffdd33', green: '#22c55e', purple: '#a855f7', orange: '#f97316' };
+  const BONUS_DROP_COLORS = { red: '#ff3355', blue: '#33aaff', yellow: '#ffdd33', green: '#22c55e', purple: '#a855f7', orange: '#f97316', speed: '#38bdf8' };
 
   function brickColor(brick) {
     return BRICK_COLORS[brick.colorIdx % 3];

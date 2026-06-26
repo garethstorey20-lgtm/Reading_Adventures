@@ -4080,6 +4080,7 @@ window.launchArcadeFromBoard = (gameId) => {
   state.view = 'arcade';
   setArcadeLandscapeMode(true);
   render();
+  scheduleStarcadeMobileFullscreen();
 };
 
 window.returnToBoardFromArcade = () => {
@@ -5183,6 +5184,41 @@ function flickTagMeDiceFace(cubeId = 'tagMeDiceCube') {
   if (cube) cube.setAttribute('data-face', String(1 + Math.floor(Math.random() * 6)));
 }
 
+async function animateTagMeChaserRoll(chaser, roll) {
+  const chaserDiceWrap = document.getElementById('tagMeChaserDiceWrap');
+  if (chaserDiceWrap) chaserDiceWrap.classList.add('tagme-chaser-dice-wrap--active');
+
+  const overlayCubeId = 'tagMeChaserRollOverlayCube';
+  const area = document.querySelector('.tagme-board-area') || document.getElementById('tagMeBoardViewport');
+  let overlay = null;
+  if (area) {
+    overlay = document.createElement('div');
+    overlay.className = 'tagme-chaser-roll-overlay fadeIn';
+    overlay.innerHTML = `
+      <div class="tagme-chaser-roll-card tagme-board-dice tagme-board-dice--display tagme-board-dice--chaser">
+        <p class="tagme-chaser-roll-title">${escapeHtmlText(chaser.name)} rolls…</p>
+        ${buildTagMeDiceCubeHtml(1, overlayCubeId)}
+      </div>`;
+    area.appendChild(overlay);
+    const scene = overlay.querySelector('.profile-board-dice-scene');
+    if (scene) scene.style.transform = 'scale(1.35)';
+  }
+
+  setTagMeDiceFace('rolling', 'tagMeChaserDiceCube');
+  if (overlay) setTagMeDiceFace('rolling', overlayCubeId);
+  for (let i = 0; i < 14; i++) {
+    flickTagMeDiceFace('tagMeChaserDiceCube');
+    if (overlay) flickTagMeDiceFace(overlayCubeId);
+    await new Promise(r => setTimeout(r, 55 + i * 6));
+  }
+  setTagMeDiceFace(roll, 'tagMeChaserDiceCube');
+  if (overlay) setTagMeDiceFace(roll, overlayCubeId);
+  await new Promise(r => setTimeout(r, 900));
+
+  if (chaserDiceWrap) chaserDiceWrap.classList.remove('tagme-chaser-dice-wrap--active');
+  overlay?.remove();
+}
+
 function getTagMeModifier(index) {
   if (index <= 0 || index >= BOARD_FINISH_INDEX || isBoardBonusSquare(index)) return 0;
   if (TAG_MODIFIER_BACK2.has(index)) return -2;
@@ -5603,19 +5639,10 @@ async function runTagMeChasePhase(name, td) {
   await new Promise(r => setTimeout(r, 1000));
 
   const msgEl = document.getElementById('tagMeMsg');
-  const chaserDiceWrap = document.getElementById('tagMeChaserDiceWrap');
-  if (chaserDiceWrap) chaserDiceWrap.classList.add('tagme-chaser-dice-wrap--active');
-
-  setTagMeDiceFace('rolling', 'tagMeChaserDiceCube');
-  for (let i = 0; i < 14; i++) {
-    flickTagMeDiceFace('tagMeChaserDiceCube');
-    await new Promise(r => setTimeout(r, 55 + i * 6));
-  }
   const roll = 1 + Math.floor(Math.random() * 6);
-  setTagMeDiceFace(roll, 'tagMeChaserDiceCube');
   td.lastChaserRoll = roll;
   saveTagMeState(name, td);
-  if (chaserDiceWrap) chaserDiceWrap.classList.remove('tagme-chaser-dice-wrap--active');
+  await animateTagMeChaserRoll(chaser, roll);
 
   if (msgEl) {
     msgEl.textContent = `${chaser.name} rolls ${roll}!`;
@@ -5822,9 +5849,11 @@ function renderTagMeMode(app) {
               </div>` : '<p class="tagme-chaser-pick-hint">Pick a chaser to start</p>'}
               ${chaseStatus}
               ${chaser ? `
-              <div id="tagMeChaserDiceWrap" class="tagme-chaser-dice-wrap${td.chaseActive ? '' : ' tagme-chaser-dice-wrap--hidden'}" aria-label="${chaser.name} dice">
-                <span class="tagme-chaser-dice-label">${chaser.emoji} Roll</span>
-                ${buildTagMeDiceCubeHtml(td.lastChaserRoll || 1, 'tagMeChaserDiceCube')}
+              <div id="tagMeChaserDiceWrap" class="tagme-chaser-dice-wrap" aria-label="${chaser.name} dice">
+                <div class="tagme-board-dice tagme-board-dice--display tagme-board-dice--chaser">
+                  <span class="tagme-chaser-dice-label">${chaser.emoji} Chaser roll</span>
+                  ${buildTagMeDiceCubeHtml(td.lastChaserRoll || 1, 'tagMeChaserDiceCube')}
+                </div>
               </div>` : ''}
             </div>
             <div class="profile-fs-panel-section tagme-panel-section tagme-panel-section--roll">
@@ -6600,6 +6629,27 @@ function getSoundFlipAmbiguity(gpc) {
   return 'low';
 }
 
+/** True when a whole-word 180° rotation looks the same as upright (e.g. un → un). */
+function flip180LooksIdentical(gpc) {
+  const s = String(gpc).toLowerCase();
+  const symmetric = 'o0xvhimlci1|';
+  if ([...s].every(c => symmetric.includes(c))) return true;
+  const flipPairs = { u: 'n', n: 'u', b: 'q', q: 'b', p: 'd', d: 'p', w: 'm', m: 'w' };
+  let flipped = '';
+  for (let i = s.length - 1; i >= 0; i--) {
+    const c = s[i];
+    flipped += flipPairs[c] || c;
+  }
+  return flipped === s;
+}
+
+function getSoundFlipRotate180Variant(gpc) {
+  if (flip180LooksIdentical(gpc)) {
+    return { id: 'r150', transform: 'rotate(150deg)' };
+  }
+  return { id: 'r180', transform: 'rotate(180deg)' };
+}
+
 /** Only transforms that clearly change how the grapheme looks (no position-only tricks). */
 function getWholeWordFlipPool(gpc) {
   const level = getSoundFlipAmbiguity(gpc);
@@ -6611,15 +6661,16 @@ function getWholeWordFlipPool(gpc) {
     { id: 'r45', transform: 'rotate(45deg)' },
     { id: 'r135', transform: 'rotate(-45deg)' }
   ];
+  const rotate180 = getSoundFlipRotate180Variant(gpc);
   const strong = [
-    { id: 'r180', transform: 'rotate(180deg)' },
+    rotate180,
     { id: 'mirrorX', transform: 'scaleX(-1)' },
     { id: 'mirrorY', transform: 'scaleY(-1)' },
     ...sideways,
     { id: 'flipBoth', transform: 'scale(-1, -1)' }
   ];
   if (level === 'high') return [...sideways, ...diagonal];
-  if (level === 'medium') return [...sideways, ...diagonal, { id: 'r180', transform: 'rotate(180deg)' }];
+  if (level === 'medium') return [...sideways, ...diagonal, rotate180];
   return strong;
 }
 
@@ -9156,6 +9207,31 @@ function renderArcadeMenu(app) {
     </div>`;
 }
 
+function isStarcadeSmartphone() {
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  const narrow = window.matchMedia('(max-width: 1024px)').matches;
+  const touch = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(hover: none)').matches;
+  return narrow && touch;
+}
+
+function requestStarcadeMobileFullscreen() {
+  if (!isStarcadeSmartphone()) return;
+  const el = getArcadeCanvasShell() || document.querySelector('.arcade-screen--landscape-lock');
+  if (!el) return;
+  const active = document.fullscreenElement || document.webkitFullscreenElement;
+  if (active === el) return;
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (fn) fn.call(el).catch(() => {});
+}
+
+function scheduleStarcadeMobileFullscreen() {
+  if (!isStarcadeSmartphone()) return;
+  requestAnimationFrame(() => {
+    requestStarcadeMobileFullscreen();
+    requestAnimationFrame(requestStarcadeMobileFullscreen);
+  });
+}
+
 function setArcadeLandscapeMode(active) {
   document.body.classList.toggle('arcade-landscape-active', !!active);
 }
@@ -9172,6 +9248,7 @@ window.launchArcadeGame = (gameId, cost) => {
   state.view = 'arcade';
   setArcadeLandscapeMode(true);
   render();
+  scheduleStarcadeMobileFullscreen();
 };
 
 window.exitArcadeGame = () => {
@@ -9263,12 +9340,13 @@ function arcadeCanvasExitLabel() {
 
 function buildArcadeCanvasShellMarkup(frameId, frameSrc, frameTitle, dockHtml) {
   const exitLabel = arcadeCanvasExitLabel();
+  const fsBtn = isStarcadeSmartphone() ? '' : `<button type="button" onclick="toggleArcadeCanvasFullscreen()" class="arcade-canvas-fullscreen-btn" title="Toggle fullscreen" aria-label="Toggle fullscreen" aria-pressed="false">⛶</button>`;
   return `
     <div class="arcade-canvas-shell" id="arcadeCanvasShell">
       <div class="arcade-canvas-stage flex flex-col">
         <div class="arcade-canvas-toolbar">
           <button type="button" onclick="exitArcadeGame()" class="arcade-pong-exit">← ${exitLabel}</button>
-          <button type="button" onclick="toggleArcadeCanvasFullscreen()" class="arcade-canvas-fullscreen-btn" title="Toggle fullscreen" aria-label="Toggle fullscreen" aria-pressed="false">⛶</button>
+          ${fsBtn}
         </div>
         <iframe id="${frameId}" src="${frameSrc}" class="arcade-pong-frame flex-1 w-full" title="${frameTitle}" allow="autoplay"></iframe>
       </div>
@@ -9319,7 +9397,7 @@ function mountArcadeCanvasShell() {
     document.addEventListener('fullscreenchange', window._arcadeCanvasOnFsChange);
     document.addEventListener('webkitfullscreenchange', window._arcadeCanvasOnFsChange);
   }
-  if (!state.arcade?.finished) {
+  if (!state.arcade?.finished && isStarcadeSmartphone()) {
     requestArcadeCanvasFullscreen();
     requestAnimationFrame(() => requestArcadeCanvasFullscreen());
   }
