@@ -7,6 +7,6 @@ OK    web-pilot/js/app.js  (hideBanner)
 OK    web-pilot/js/pilot-bootstrap.js  (pilot-app-ready)
 OK    web-pilot/css/app.css  (signpost-scaler)
 
-Built: 2026-07-06T22:01:05.183Z
+Built: 2026-07-07T04:01:28.414Z
 
 Upload everything in this folder to GitHub repo Reading_Adventures.
