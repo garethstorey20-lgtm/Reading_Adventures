@@ -1,266 +1,181 @@
 /**
-
  * PILOT — load class-data.json from Google Drive (file id or folder + API key).
-
  */
-
 (function () {
-
   const CONFIG = window.DRIVE_PILOT_CONFIG || {};
 
+  function coded(code, message) {
+    if (window.PilotErrors?.make) return window.PilotErrors.make(code, message);
+    const err = new Error(message);
+    err.pilotCode = code;
+    return err;
+  }
 
+  function httpCoded(prefix, status, message) {
+    const code = window.PilotErrors?.httpCode
+      ? window.PilotErrors.httpCode(prefix, status)
+      : prefix + (status ? "-" + status : "");
+    return coded(code, message);
+  }
 
   function fileIdFromUrl() {
-
     const params = new URLSearchParams(window.location.search);
-
     return (
-
       params.get("dataId") ||
-
       params.get("driveId") ||
-
       params.get("id") ||
-
       CONFIG.fileId ||
-
       ""
-
     ).trim();
-
   }
-
-
 
   function apiKeyFromUrl() {
-
     const params = new URLSearchParams(window.location.search);
-
     return (params.get("apiKey") || CONFIG.apiKey || "").trim();
-
   }
-
-
 
   async function resolveApiKey() {
-
     const direct = apiKeyFromUrl();
-
     if (direct) return direct;
-
     if (window.TenantRegistry?.getDeploymentApiKey) {
-
       const fromRegistry = await window.TenantRegistry.getDeploymentApiKey();
-
       if (fromRegistry) return fromRegistry;
-
     }
-
     return "";
-
   }
-
-
 
   function exportDownloadUrl(fileId) {
-
-    return (
-
-      "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId)
-
-    );
-
+    return "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId);
   }
-
-
 
   function apiMediaUrl(fileId, apiKey) {
-
     return (
-
       "https://www.googleapis.com/drive/v3/files/" +
-
       encodeURIComponent(fileId) +
-
       "?alt=media&key=" +
-
       encodeURIComponent(apiKey)
-
     );
-
   }
-
-
 
   function apiListUrl(folderId, apiKey, pageToken) {
-
     const q =
-
       "'" +
-
       folderId +
-
       "' in parents and trashed=false and (mimeType='application/json' or name contains '.json')";
-
     let url =
-
       "https://www.googleapis.com/drive/v3/files?q=" +
-
       encodeURIComponent(q) +
-
       "&fields=nextPageToken,files(id,name,modifiedTime,mimeType)&orderBy=modifiedTime desc&pageSize=25&supportsAllDrives=true&includeItemsFromAllDrives=true&key=" +
-
       encodeURIComponent(apiKey);
-
     if (pageToken) url += "&pageToken=" + encodeURIComponent(pageToken);
-
     return url;
-
   }
-
-
 
   async function findFileInFolder(folderId, fileName, apiKey) {
-
     if (!folderId || !apiKey) return null;
-
     const q =
-
       "'" +
-
       folderId +
-
       "' in parents and name='" +
-
       fileName.replace(/'/g, "\\'") +
-
       "' and trashed=false";
-
     const url =
-
       "https://www.googleapis.com/drive/v3/files?q=" +
-
       encodeURIComponent(q) +
-
       "&fields=files(id,name)&pageSize=5&supportsAllDrives=true&includeItemsFromAllDrives=true&key=" +
-
       encodeURIComponent(apiKey);
-
-    const res = await fetch(url, { cache: "no-store" });
-
-    if (!res.ok) throw new Error("Drive folder lookup HTTP " + res.status);
-
+    let res;
+    try {
+      res = await fetch(url, { cache: "no-store" });
+    } catch (e) {
+      throw coded("RA-NET", "Drive folder lookup network error: " + (e.message || e));
+    }
+    if (!res.ok) {
+      throw httpCoded("RA-FIND", res.status, "Drive folder lookup HTTP " + res.status);
+    }
     const data = await res.json();
-
     const files = data.files || [];
-
     if (!files.length) return null;
-
     return files[0].id;
-
   }
-
-
 
   async function listJsonFilesInFolder(folderId, apiKey) {
-
     if (!folderId || !apiKey) return [];
-
     const out = [];
-
     let pageToken = "";
-
     for (let i = 0; i < 5; i++) {
-
-      const res = await fetch(apiListUrl(folderId, apiKey, pageToken), { cache: "no-store" });
-
-      if (!res.ok) throw new Error("Drive file list HTTP " + res.status);
-
+      let res;
+      try {
+        res = await fetch(apiListUrl(folderId, apiKey, pageToken), { cache: "no-store" });
+      } catch (e) {
+        throw coded("RA-NET", "Drive file list network error: " + (e.message || e));
+      }
+      if (!res.ok) {
+        throw httpCoded("RA-LIST", res.status, "Drive file list HTTP " + res.status);
+      }
       const data = await res.json();
-
       out.push.apply(out, data.files || []);
-
       pageToken = data.nextPageToken || "";
-
       if (!pageToken) break;
-
     }
-
     return out;
-
   }
-
-
 
   async function fetchText(url) {
-
-    const res = await fetch(url, { cache: "no-store" });
-
-    if (!res.ok) throw new Error("HTTP " + res.status);
-
-    const text = await res.text();
-
-    if (text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html")) {
-
-      throw new Error("Drive returned a web page, not JSON. Add a Google API key.");
-
+    let res;
+    try {
+      res = await fetch(url, { cache: "no-store" });
+    } catch (e) {
+      throw coded("RA-NET", "Network error: " + (e.message || e));
     }
-
+    if (!res.ok) {
+      throw httpCoded("RA-GET", res.status, "HTTP " + res.status);
+    }
+    const text = await res.text();
+    if (text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html")) {
+      throw coded("RA-HTML", "Drive returned a web page, not JSON. Add a Google API key.");
+    }
     return text;
-
   }
-
-
 
   async function loadClassDataJson(fileId, apiKey) {
-
     const errors = [];
-
     const key = String(apiKey || "").trim();
-
-
+    let lastCoded = null;
 
     if (key) {
-
       try {
-
         return await fetchText(apiMediaUrl(fileId, key));
-
       } catch (e) {
-
+        lastCoded = e;
         errors.push("Google API: " + e.message);
-
       }
-
     }
-
-
 
     try {
-
       return await fetchText(exportDownloadUrl(fileId));
-
     } catch (e) {
-
+      lastCoded = e;
       errors.push("Drive export link: " + e.message);
-
     }
 
+    if (lastCoded && lastCoded.pilotCode && lastCoded.pilotCode !== "RA-LOAD") {
+      const wrapped = coded(
+        lastCoded.pilotCode,
+        "Could not load class data from Google Drive.\n" +
+          errors.join("\n") +
+          (key ? "" : "\n\nAdd a Google API key in drive-config.js (see README).")
+      );
+      throw wrapped;
+    }
 
-
-    throw new Error(
-
+    throw coded(
+      key ? "RA-LOAD" : "RA-KEY",
       "Could not load class data from Google Drive.\n" +
-
         errors.join("\n") +
-
         (key ? "" : "\n\nAdd a Google API key in drive-config.js (see README).")
-
     );
-
   }
-
-
 
   function fileNameFromUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -317,7 +232,8 @@
     const apiKey = options.apiKey || (await resolveApiKey());
 
     if (options.folderId && !apiKey) {
-      throw new Error(
+      throw coded(
+        "RA-KEY",
         "This site is not configured with a Google Drive API key yet. Ask your teacher to contact support."
       );
     }
@@ -327,7 +243,8 @@
     const files = await listJsonFilesInFolder(options.folderId, apiKey);
 
     if (!files.length) {
-      throw new Error(
+      throw coded(
+        "RA-EMPTY",
         "No JSON files found in the Google Drive folder yet. Ask your teacher to upload a class file."
       );
     }
@@ -342,7 +259,7 @@
     if (urlName) {
       const fromUrl = matchFileByName(files, urlName);
       if (fromUrl) return { fileId: fromUrl.id, files, needsPicker: false };
-      throw new Error('No file named "' + urlName + '" in the Drive folder.');
+      throw coded("RA-NAME", 'No file named "' + urlName + '" in the Drive folder.');
     }
 
     if (files.length === 1) {
@@ -368,33 +285,18 @@
     return null;
   }
 
-
-
   window.DrivePilotLoader = {
-
     isPilot: true,
-
     fileIdFromUrl,
-
     apiKeyFromUrl,
-
     resolveApiKey,
-
     loadClassDataJson,
-
     findFileInFolder,
-
     listJsonFilesInFolder,
-
     resolveClassDataFileId,
     resolveFolderJsonFile,
     fileNameFromUrl,
     rememberFileId,
-
     exportDownloadUrl,
-
   };
-
 })();
-
-

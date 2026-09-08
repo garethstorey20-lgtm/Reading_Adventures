@@ -3343,7 +3343,18 @@ function loadFile(file){
       if (window.DrivePilot?.hideBanner) window.DrivePilot.hideBanner();
       render();
     } catch(err) {
-      $('uploadMsg').textContent = 'Could not read file: ' + err.message;
+      if (window.PilotErrors?.report) {
+        const coded = window.PilotErrors.make
+          ? window.PilotErrors.make(
+              /no classes|Invalid format/i.test(String(err.message || '')) ? 'RA-JSON' : 'RA-PARSE',
+              err.message || String(err)
+            )
+          : err;
+        window.PilotErrors.report(coded);
+      } else {
+        const msg = $('uploadMsg');
+        if (msg) msg.textContent = 'Could not read file: ' + err.message;
+      }
     }
   };
   reader.readAsText(file);

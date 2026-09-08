@@ -1,0 +1,53 @@
+DEPLOY CHECKLIST — Reading_Adventures on GitHub Pages
+========================================================
+
+Live site base URL:
+  https://garethstorey20-lgtm.github.io/Reading_Adventures/
+
+Student test link:
+  https://garethstorey20-lgtm.github.io/Reading_Adventures/web-pilot/?t=garethstorey20
+
+BUILD FOLDER TO UPLOAD
+----------------------
+  cd TRACKER\web-pilot
+  node scripts\prepare-github-folder.cjs
+
+Upload everything inside:
+  Desktop\reading-adventures-web
+
+To GitHub repo:
+  garethstorey20-lgtm/Reading_Adventures
+
+ENABLE GITHUB PAGES (required — otherwise 404)
+-----------------------------------------------
+1. Repo → Settings → Pages
+2. Build and deployment → Source: Deploy from a branch
+3. Branch: main (or master) → / (root) → Save
+4. Wait 5–10 minutes
+
+VERIFY NEW CODE IS LIVE
+-----------------------
+Open the student test link. Yellow banner must include:
+  (pilot v2)
+
+If banner says "not for final release" → old files still on GitHub.
+
+FOLDER STRUCTURE ON GITHUB (root of repo)
+-----------------------------------------
+  index.html              ← redirects to web-pilot/
+  web-pilot/
+    index.html
+    drive-config.js       ← includes API key
+    tenants.json
+    js/
+      pilot-bootstrap.js
+      tenant-registry.js
+      drive-loader.js
+      app.js
+  data/
+  HTML games/
+
+ASSESSMENT BUDDY
+----------------
+Rebuild installer after URL change so School link tab shows the new student URL:
+  reading-tracker-suite\shared\cloud-config.cjs

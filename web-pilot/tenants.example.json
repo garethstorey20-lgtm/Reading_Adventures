@@ -1,0 +1,12 @@
+{
+  "pilot-oak-7x2": {
+    "label": "Oak Primary — pilot class",
+    "classDataFileId": "PASTE_GOOGLE_DRIVE_FILE_ID_HERE",
+    "provider": "google-drive"
+  },
+  "pilot-river-9k1": {
+    "label": "River School — test group",
+    "classDataFileId": "ANOTHER_FILE_ID",
+    "provider": "google-drive"
+  }
+}
