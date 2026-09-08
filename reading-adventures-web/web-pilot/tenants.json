@@ -1,0 +1,83 @@
+{
+  "_config": {
+    "apiKey": "AIzaSyDVmKapHCxPx3PRrkFZz7wlUvJm1WfVpMA",
+    "label": "Deployment settings (not a school)"
+  },
+  "garethstorey20": {
+    "label": "Garethstorey20",
+    "provider": "google-drive",
+    "folderId": "1_kAzapYEnIYRWuNLEVUcp6USiJBCExuM",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-cedar-4m8": {
+    "label": "Cedar",
+    "provider": "google-drive",
+    "folderId": "1ZRxhvpQsOG5G2SHstMMfcmLOpN-VyCN0",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-birch-7k2": {
+    "label": "Birch",
+    "provider": "google-drive",
+    "folderId": "17KXmCaSq3s4G-4c6IRvtE_bmSNycKAau",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-maple-9n1": {
+    "label": "Maple",
+    "provider": "google-drive",
+    "folderId": "1Ot_CAHSKhwK7lhf09wFBCNOcZdoUVZmj",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-willow-3p6": {
+    "label": "Willow",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-aspen-8r4": {
+    "label": "Aspen",
+    "provider": "google-drive",
+    "folderId": "1D9xyyPszKNnQE5ImBqprsUact9Au8hUS",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-oak-2t7": {
+    "label": "Oak",
+    "provider": "google-drive",
+    "folderId": "1BVCEkAqqvT2somGJSSgDVF9K5IHqlUmt",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-pine-5w9": {
+    "label": "Pine",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-elder-6x3": {
+    "label": "Elder",
+    "provider": "google-drive",
+    "folderId": "1GXj4VhSPd7Q3yMcMDpG1n3yX_Ozr3Ap5",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-hazel-1y5": {
+    "label": "Hazel",
+    "provider": "google-drive",
+    "folderId": "1ho4tb9vHNnNwDftaXNkwkdtier_yeyEc",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  },
+  "pilot-rowan-0z8": {
+    "label": "Rowan",
+    "provider": "google-drive",
+    "folderId": "",
+    "classDataFileId": "",
+    "classDataFileName": ""
+  }
+}
