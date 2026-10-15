@@ -3409,17 +3409,41 @@ window.selectClass = (key) => {
   render();
 };
 
+/** First letter of each name part, e.g. "Arthur Bob Cox" → "ABC". A trailing number is kept whole, so "Student 12" stays "S12". */
+function studentInitials(name) {
+  const parts = String(name || '').trim().split(/[\s-]+/).filter(Boolean);
+  const letters = [];
+  for (const part of parts) {
+    const number = part.match(/^\p{N}+/u);
+    if (number) {
+      letters.push(number[0]);
+      continue;
+    }
+    const ch = Array.from(part).find(c => /\p{L}/u.test(c));
+    if (ch) letters.push(ch.toLocaleUpperCase());
+  }
+  return letters.join('') || '?';
+}
+
+function studentInitialsSizeClass(initials) {
+  const n = initials.length;
+  if (n <= 2) return 'text-2xl';
+  if (n === 3) return 'text-xl';
+  if (n === 4) return 'text-base';
+  return 'text-xs';
+}
+
 // ============================================================
 // DASHBOARD
 // ============================================================
 function renderDashboard(app){
   const cls = state.data.classes[state.classKey];
   const cards = cls.students.map(name => {
-    const initials = name.replace('Student ','S');
+    const initials = studentInitials(name);
     return `
-      <button onclick="selectStudent('${name.replace(/'/g,"\\'")}')" class="bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 rounded-2xl p-5 transition shadow-lg hover:scale-105 flex flex-col items-center gap-3">
-        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-500 flex items-center justify-center font-bold text-2xl shadow-xl">${initials}</div>
-        <div class="font-semibold text-center text-lg">${name}</div>
+      <button onclick="selectStudent('${name.replace(/'/g,"\\'")}')" class="min-w-0 w-full bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 rounded-2xl p-5 transition shadow-lg hover:scale-105 flex flex-col items-center gap-3">
+        <div class="w-20 h-20 shrink-0 overflow-hidden px-1.5 rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-500 flex items-center justify-center font-bold leading-none ${studentInitialsSizeClass(initials)} shadow-xl">${initials}</div>
+        <div class="font-semibold text-center text-lg leading-tight break-words w-full">${name}</div>
         <div class="text-xs text-white/60 flex items-center gap-1">🔒 Password needed</div>
       </button>`;
   }).join('');
@@ -3458,13 +3482,13 @@ window.selectStudent = (name) => {
 // ============================================================
 function renderStudentAuth(app) {
   const name = state.selectedStudent;
-  const initials = name.replace('Student ','S');
+  const initials = studentInitials(name);
   app.innerHTML = `
     <div class="min-h-screen flex items-center justify-center p-4">
       <div class="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-8 max-w-md w-full fadeIn">
         <button onclick="state.view='dashboard'; render()" class="text-white/60 hover:text-white text-sm mb-4">← Back</button>
         <div class="text-center mb-6">
-          <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-500 flex items-center justify-center font-bold text-2xl shadow-xl mb-3 floaty">${initials}</div>
+          <div class="w-20 h-20 mx-auto shrink-0 overflow-hidden px-1.5 rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-500 flex items-center justify-center font-bold leading-none ${studentInitialsSizeClass(initials)} shadow-xl mb-3 floaty">${initials}</div>
           <h2 class="text-2xl font-bold">Hi ${name}!</h2>
           <p class="text-white/70 text-sm mt-1">🔐 Enter your secret password to play</p>
         </div>
